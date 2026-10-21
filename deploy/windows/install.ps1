@@ -55,7 +55,9 @@ if ((Test-Path (Join-Path $repositoryRoot ".next\BUILD_ID")) -and $installedStam
 }
 
 if (-not $releaseHealthy) {
-  & npm.cmd ci
+  # production.ps1 sets NODE_ENV=production before this point. npm otherwise
+  # omits TypeScript, Tailwind/PostCSS, and other build-only dependencies.
+  & npm.cmd ci --include=dev
   if ($LASTEXITCODE -ne 0) { throw "npm clean install failed. Trading Tools tasks remain stopped." }
   & npm.cmd run ensure:sqlite
   if ($LASTEXITCODE -ne 0) { throw "SQLite ABI verification failed." }

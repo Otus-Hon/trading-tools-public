@@ -970,3 +970,20 @@ Verification:
 - The public production build and complete public-security integration suite passed; production dependency audit reported zero vulnerabilities.
 - Auto-strategy tests, four expiry tests, eight backtest-engine tests, and three Python strategy-configuration tests passed.
 - The real-data audit passed with zero errors: 227 official HKEX rows through 2026-10-20, 211 long-flow rows, 112 short-flow rows, and a complete 2,912-product/1,094-level Futu CBBC snapshot. Five expected warnings remained for the offline/stale local OpenD cache and four backtest timeframes.
+
+### 2026-10-21 — Install build dependencies in the Windows production environment
+
+User request:
+
+- Diagnose the follow-up VPS build failure after the Windows native-module and service-account repair.
+
+Diagnosis:
+
+- `production.ps1` correctly set `NODE_ENV=production` before installation, but npm consequently omitted every development dependency. The VPS installed only 75 packages instead of the full locked build toolchain.
+- The missing `@tailwindcss/postcss` caused the direct CSS build error. Missing TypeScript/build tooling also caused Webpack to report tracked TypeScript modules such as `clientDiag.ts` and `cbbcKnockout.ts` as unresolved; those files were present in Git and passed the Windows CI build when the complete toolchain was installed.
+
+Implementation:
+
+- Made Windows installation explicitly run `npm ci --include=dev` for the build phase while keeping `NODE_ENV=production`, then retain the existing post-verification `npm prune --omit=dev` security step.
+- Changed the Windows Server 2022 CI job to reproduce the production environment and assert that Tailwind/PostCSS and TypeScript are installed before building.
+- Preserved all runtime databases, configuration, OpenD, Python packages, tasks, and logs; the failed deployment never reached service-account or publication steps.

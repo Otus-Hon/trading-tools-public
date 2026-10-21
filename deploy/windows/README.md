@@ -99,6 +99,7 @@ The password prompt is for the dedicated `TradingToolsSvc` account. Input is a `
 ### Windows failure causes addressed
 
 - Native `.node` files cannot be replaced while the existing Next.js/worker processes hold them open. The installer now stops only app-scoped processes before `npm ci`, eliminating the SWC `EPERM` and stale SQLite binary.
+- The production configuration sets `NODE_ENV=production`; dependency installation now explicitly includes locked development dependencies needed to compile TypeScript and Tailwind, then prunes them after the verified build.
 - SQLite is rechecked in a fresh Node process after rebuild, so a prior failed native-module load cannot contaminate verification in the repair process.
 - The security test launches Next directly with `node.exe`; it no longer asks Node to spawn the Windows `npm.cmd` shim, which caused `spawn EINVAL`.
 - `SecureString` values stay in one PowerShell runspace. Passing one through `powershell.exe -File` converted it to the literal string `System.Security.SecureString`.

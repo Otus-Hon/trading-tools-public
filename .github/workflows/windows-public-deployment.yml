@@ -14,6 +14,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     env:
+      NODE_ENV: "production"
       TRADING_TOOLS_PUBLIC_MODE: "1"
       NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE: "1"
       FUTU_HOST: "127.0.0.1"
@@ -25,7 +26,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - name: Install locked dependencies
-        run: npm ci
+        run: npm ci --include=dev
+      - name: Verify build dependencies are present
+        run: npm ls --include=dev @tailwindcss/postcss typescript
       - name: Verify SQLite ABI and connection
         shell: powershell
         run: |
