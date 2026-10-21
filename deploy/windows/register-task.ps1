@@ -79,7 +79,7 @@ try {
     Start-ScheduledTask -TaskName $task.Name
   }
 } finally {
-  Remove-ScheduledTask -TaskName "TradingToolsVerifyRuntime" -Confirm:$false -ErrorAction SilentlyContinue
+  Unregister-ScheduledTask -TaskName "TradingToolsVerifyRuntime" -Confirm:$false -ErrorAction SilentlyContinue
   $plainPassword = $null
 }
 

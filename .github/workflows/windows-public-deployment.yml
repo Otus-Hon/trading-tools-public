@@ -45,6 +45,14 @@ jobs:
           Get-ChildItem .\deploy\windows\*.ps1 | ForEach-Object {
             [void][ScriptBlock]::Create((Get-Content $_.FullName -Raw))
           }
+          foreach ($command in @(
+            "Get-ScheduledTask", "Register-ScheduledTask", "Start-ScheduledTask",
+            "Stop-ScheduledTask", "Unregister-ScheduledTask"
+          )) {
+            if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+              throw "Required Windows ScheduledTasks command is unavailable: $command"
+            }
+          }
           $testUser = "TTCI$($env:GITHUB_RUN_ATTEMPT)$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
           $credentialPath = "C:\TradingTools\config\$testUser.credential.xml"
           try {

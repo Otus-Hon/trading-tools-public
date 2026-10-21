@@ -1015,3 +1015,15 @@ Implementation:
 - Remove inherited access from the credential file and grant access only to local Administrators and SYSTEM. Reapply that file ACL after broader read permissions are granted to `TradingToolsSvc`, so the limited service identity cannot read its saved credential.
 - Load the encrypted credential automatically for resume and later deployments. Added explicit rotation and manual-prompt switches for recovery without changing Windows password policy.
 - Extended Windows Server CI to generate, ACL-protect, reload, length-check, and use the encrypted credential to create a temporary non-administrator service account.
+
+### 2026-10-21 — Correct temporary Scheduled Task cleanup
+
+User request:
+
+- Continue deployment after automatic credential generation and low-privilege account creation succeeded but temporary verification-task cleanup failed.
+
+Implementation:
+
+- Replaced the nonexistent `Remove-ScheduledTask` call with Windows' supported `Unregister-ScheduledTask` cmdlet.
+- Kept cleanup idempotent and non-interactive; rerunning safely replaces the temporary verification task and both application tasks using the already encrypted credential.
+- Expanded Windows Server CI to assert that every ScheduledTasks cmdlet used by deployment exists, preventing another parser-valid but unavailable command from reaching the VPS.
