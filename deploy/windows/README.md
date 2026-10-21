@@ -100,6 +100,32 @@ powershell -ExecutionPolicy Bypass -File C:\TradingTools\app\deploy\windows\upda
 
 The updater uses `git pull --ff-only`, rebuilds, and restarts only `TradingToolsWeb` and `TradingToolsWorker`. It does not restart OpenD, Tailscale, or unrelated applications.
 
+The update command now shows progress for GitHub checking, dependency preparation, production compilation, tests, restart, and health verification. If `origin/main` is already deployed, it exits without rebuilding.
+
+## Automatically deploy GitHub changes
+
+After one manual update has downloaded the automatic-update scripts, register the opt-in polling task once from Administrator PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\TradingTools\app\deploy\windows\register-auto-update.ps1
+```
+
+The task checks `origin/main` every two minutes. It does nothing when the commit is unchanged; for a new fast-forward commit it runs the same tested build, restarts only the Trading Tools web/worker tasks, and verifies the deployment. Concurrent checks are locked, tracked local changes fail closed, and output is appended to `C:\TradingTools\logs\auto-update.log`.
+
+The task requires a credential allowed to update `C:\TradingTools\app` and restart the two Trading Tools tasks. The registration prompt defaults to the current Administrator account because the low-privilege web/worker identity intentionally has read-only source access. Task Scheduler stores that credential; use a dedicated deployment administrator if the server policy provides one.
+
+To change the polling interval, re-register it, for example:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\TradingTools\app\deploy\windows\register-auto-update.ps1 -IntervalMinutes 5
+```
+
+Disable automatic deployment without affecting the running website:
+
+```powershell
+Disable-ScheduledTask -TaskName TradingToolsAutoUpdate
+```
+
 ## Repair or redeploy safely
 
 From Administrator PowerShell, this single command downloads the reviewed release and runs the complete private deployment gate:

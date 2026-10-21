@@ -1176,3 +1176,31 @@ Verification:
 
 - Targeted lint and production-build checks passed under the pinned Node version.
 - Browser inspection confirmed visible, even spacing between the `0700`, `9988`, and `0005` cards without symbol clipping.
+
+### 2026-10-21 — Automatic GitHub deployment, staged loading progress, and outer dashboard margin
+
+User request:
+
+- Avoid manually rebuilding every time GitHub changes, show useful progress while deployment and the dashboard load, and correct the still-missing space above the chart/card area highlighted in the screenshot.
+
+Diagnosis:
+
+- The earlier margin change increased the gutters between related-market cards, but the screenshot identified the page's outer top edge. `/market-data` explicitly forced top and bottom padding to zero, leaving the content against the navigation divider.
+- The Windows updater always ran a full pull/install/build path and had no scheduled GitHub-change detector or visible build stages.
+- Initial HSI loading exposed only a text message, with no indication of whether the request was connecting, validating, or rendering.
+
+Implementation:
+
+- Added 12-pixel top and bottom dashboard padding so the complete Main Data surface, including the right-hand cards, is visibly separated from the navigation and viewport edges.
+- Replaced the initial HSI text-only state with an accessible progress bar driven by real request milestones: connect, receive/validate, prepare history, and render indicators.
+- Added an opt-in `TradingToolsAutoUpdate` Windows Scheduled Task that checks `origin/main` every two minutes and builds only when the deployed commit changes.
+- Made automatic updates serialize through a named mutex, refuse tracked local changes and non-fast-forward history, keep logs, reuse the existing tested installer, restart only Trading Tools tasks, and run deployment verification.
+- Added PowerShell progress stages to manual installation/update and made unchanged commits exit without an unnecessary build.
+- Documented registration, interval changes, logs, privilege boundaries, and disabling the automatic updater; added a deterministic deployment-script contract test.
+
+Verification:
+
+- Pinned Node 22.23.0 production build and TypeScript checks passed; public-security integration tests and the Windows automatic-update contract test passed.
+- Market-data audit passed with zero errors, 227 official HKEX rows, 211 long-flow rows, 112 short-flow rows, and a complete 2,886-product Futu CBBC snapshot. Four warnings remained for the intentionally preserved stale workstation Futu cache and completed-session backtest tails while local OpenD was offline.
+- Browser accessibility inspection observed the initial dashboard progress indicator at 10%, then its removal after verified data rendered. The completed page retained all market data and showed a visible 12-pixel outer margin above both the HSI panel and related-market cards.
+- The Windows Scheduled Task was not registered from the macOS development machine; registration remains an explicit one-time Administrator action on the VPS.

@@ -5,7 +5,7 @@ export default function MarketDataPage() {
   return (
     <main
       className="dashboard mx-auto h-[calc(100dvh-3.5625rem)] w-full max-w-none overflow-hidden bg-[var(--bg)] px-4 text-[var(--text)] md:px-6 lg:px-8"
-      style={{ paddingTop: 0, paddingBottom: 0 }}
+      style={{ paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
     >
       <div className="grid h-full grid-cols-1 gap-5 xl:grid-cols-[minmax(0,74fr)_minmax(360px,26fr)]">
         <section className="card flex min-h-[520px] flex-col lg:h-full lg:min-h-0">

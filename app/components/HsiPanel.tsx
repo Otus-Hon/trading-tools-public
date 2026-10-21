@@ -293,6 +293,7 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
   // date range is unchanged (e.g. a manual refresh on the same trading day).
   const [dataVersion, setDataVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState({ value: 8, label: "Connecting to verified market data…" });
   const [hasError, setHasError] = useState(false);
   const [staleMessage, setStaleMessage] = useState<string | null>(null);
   const [chartReady, setChartReady] = useState(false);
@@ -807,8 +808,12 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
     let isMounted = true;
 
     async function loadData() {
+      const isInitialLoad = !hasLoadedDataRef.current;
       try {
-        if (!hasLoadedDataRef.current) setIsLoading(true);
+        if (isInitialLoad) {
+          setIsLoading(true);
+          setLoadProgress({ value: 10, label: "Connecting to verified market data…" });
+        }
         setHasError(false);
         // Cache-bust so a manual refresh / auto-refresh always re-hits the server
         // for the latest daily bar instead of the browser's 5-min HTTP cache.
@@ -823,8 +828,14 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
         if (!response.ok) {
           throw new Error("Failed to fetch data");
         }
+        if (isMounted && isInitialLoad) {
+          setLoadProgress({ value: 42, label: "Market data received · validating…" });
+        }
 
         const responseData = (await response.json()) as ApiResponse | FutuMarketPayload;
+        if (isMounted && isInitialLoad) {
+          setLoadProgress({ value: 68, label: "Verified · preparing chart history…" });
+        }
         const futuPayload = useFutuData ? responseData as FutuMarketPayload : null;
         const rawData: ApiResponse & { candles?: Candle[] } = useFutuData
           ? {
@@ -868,6 +879,9 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
         });
 
         if (isMounted && seriesRef.current) {
+          if (isInitialLoad) {
+            setLoadProgress({ value: 84, label: "Rendering candles and indicators…" });
+          }
           const timeScale = chartRef.current?.timeScale();
           const currentRange = hasInitialViewportRef.current
             ? timeScale?.getVisibleLogicalRange() ?? null
@@ -982,6 +996,9 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
             }
           } else {
             setStaleMessage(null);
+          }
+          if (isInitialLoad) {
+            setLoadProgress({ value: 100, label: "Dashboard ready" });
           }
           setIsLoading(false);
           hasLoadedDataRef.current = true;
@@ -1973,8 +1990,26 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
         </div>
       </div>
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">
-          Loading HSI data…
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-[var(--card)]/90 px-6 backdrop-blur-[1px]" role="status" aria-live="polite">
+          <div className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-lg">
+            <div className="mb-2 flex items-center justify-between gap-4 text-xs font-semibold text-[var(--text)]">
+              <span>{loadProgress.label}</span>
+              <span className="tabular-nums text-[var(--muted)]">{loadProgress.value}%</span>
+            </div>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-gray-200"
+              role="progressbar"
+              aria-label="Loading HSI dashboard"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={loadProgress.value}
+            >
+              <div
+                className="h-full rounded-full bg-blue-600 transition-[width] duration-300 ease-out"
+                style={{ width: `${loadProgress.value}%` }}
+              />
+            </div>
+          </div>
         </div>
       )}
       {hasError && !isLoading && (
