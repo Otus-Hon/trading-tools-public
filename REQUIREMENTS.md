@@ -902,6 +902,7 @@ User request:
 Implementation:
 
 - Added an explicit public mode for the Windows deployment. It keeps OpenD on localhost and keeps the generated SQLite/cache directory outside the public repository.
+- Enforced public mode in the Windows install and startup scripts, including on servers whose production configuration file predates the safety setting.
 - Public mode disables visitor-submitted Python strategy execution, manual backtest refreshes, on-demand Futu candle extraction, forced provider-refresh query parameters, startup mutation checks, and shared market-order writes.
 - The public UI exposes Auto strategies as a stored-data view but removes the Python strategy tab and manual server-refresh button. Automatic verified-data reads and the existing controlled provider cadences remain intact.
 

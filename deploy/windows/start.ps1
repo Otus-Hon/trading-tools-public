@@ -11,6 +11,8 @@ if (-not (Test-Path $configPath)) {
 
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath) | Out-Null
 . $configPath
+$env:TRADING_TOOLS_PUBLIC_MODE = "1"
+$env:NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE = "1"
 Set-Location $repositoryRoot
 
 "[$(Get-Date -Format o)] Starting Trading Tools" | Out-File -FilePath $logPath -Append

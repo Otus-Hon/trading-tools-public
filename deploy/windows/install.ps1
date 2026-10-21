@@ -30,6 +30,8 @@ if (-not (Test-Path $configPath)) {
 }
 
 . $configPath
+$env:TRADING_TOOLS_PUBLIC_MODE = "1"
+$env:NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE = "1"
 Set-Location $repositoryRoot
 & npm.cmd ci
 & npm.cmd run build
