@@ -4,6 +4,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const Database = require("better-sqlite3");
+const {
+  MONEY_FLOW_LONG_SEED,
+  MONEY_FLOW_SHORT_SEED,
+} = require("../../../lib/moneyFlowSeed");
 
 const root = path.resolve(__dirname, "../../..");
 const dataDir = path.resolve(process.env.TRADING_TOOLS_DATA_DIR || path.join(root, "private-data", "runtime"));
@@ -127,6 +131,27 @@ if (!fs.existsSync(dbPath)) {
       shortRows: short.length,
       latestDate: latestLong.date,
       fetchedAt: latestLong.fetched_at_utc,
+    });
+  }
+  const longDates = new Set(long.map((row) => row.date));
+  const shortDates = new Set(short.map((row) => row.date));
+  const missingLongSeedDates = MONEY_FLOW_LONG_SEED
+    .map((row) => row[0])
+    .filter((date) => !longDates.has(date));
+  const missingShortSeedDates = MONEY_FLOW_SHORT_SEED
+    .map((row) => row[0])
+    .filter((date) => !shortDates.has(date));
+  if (missingLongSeedDates.length || missingShortSeedDates.length) {
+    add("ERROR", "MONEY_FLOW_SEED_MISSING", "SQLite is missing versioned money-flow baseline dates.", {
+      long: missingLongSeedDates,
+      short: missingShortSeedDates,
+    });
+  } else {
+    add("INFO", "MONEY_FLOW_SEED_SUMMARY", "Versioned money-flow baseline is present in SQLite.", {
+      longRows: MONEY_FLOW_LONG_SEED.length,
+      longRange: [MONEY_FLOW_LONG_SEED[0][0], MONEY_FLOW_LONG_SEED.at(-1)[0]],
+      shortRows: MONEY_FLOW_SHORT_SEED.length,
+      shortRange: [MONEY_FLOW_SHORT_SEED[0][0], MONEY_FLOW_SHORT_SEED.at(-1)[0]],
     });
   }
 

@@ -23,6 +23,7 @@ This file is the durable source of truth for product behavior. It must be read t
 - Provider responses are rolling windows. Upserts must accumulate history and must never delete older stored dates.
 - Every page load/refresh must render all money-flow rows stored in SQLite that align with available chart candle dates, not only the provider's latest window.
 - JSON files are inspection mirrors only. They must mirror the complete SQL history and must never replace SQL as the UI source.
+- The non-private historical CITIC baseline is versioned in the source tree and inserted into SQLite on initialization with insert-only precedence. Live provider refreshes may update matching dates and continue accumulating newer dates; deployment must not require a separately transferred seed database.
 
 ### Open interest
 
@@ -1139,3 +1140,23 @@ Verification:
 - Browser verification against an isolated copy of the real 211/112-row private SQLite database rendered the full capital-flow history, 18 exact Futu Detail levels (9 per side), readable collision lanes, complete `2,896/2,896` provenance, and unclipped `0700`/`9988`/`0005` cards.
 - Two public live-only reads 6 seconds apart advanced from `2026-10-21T14:15:06+08:00` to `14:15:16+08:00`; Futu `HK.800000` moved from 23,700.24 to 23,700.65 and `HK.HSImain` moved from 23,718 to 23,717 while open interest remained truthfully unchanged at 138,952.
 - The market-data audit passed with 0 errors. Five warnings remain limited to stale workstation Futu/backtest caches; the independently queried public feed was current, and the audit confirmed the private CITIC history at 211 long/112 short rows through `2026-10-20`.
+
+### 2026-10-21 — Version the historical capital-flow baseline
+
+User request:
+
+- Hard-code the roughly one year of non-private historical capital-flow data in the codebase instead of transferring a separate SQLite seed file to the Windows VPS.
+
+Implementation:
+
+- Added the verified CITIC HSI baseline to `lib/moneyFlowSeed.js`: 211 long rows from 2025-12-09 through 2026-10-20 and 112 short rows from 2026-05-11 through 2026-10-20.
+- Database initialization now inserts missing baseline dates into `market.sqlite` automatically. The inserts are idempotent and never overwrite a row already populated or corrected by a live provider refresh.
+- Added deterministic seed tests and market-data audit coverage so fresh deployments must contain every versioned baseline date.
+- The Windows deployment no longer requires a downloaded seed database. The hardened importer remains only as an optional compatibility path for any future trusted custom history beyond the built-in baseline.
+
+Verification:
+
+- The fresh in-memory database test passed with exactly 211 long rows and 112 short rows, confirmed a second seed pass inserts zero rows, and confirmed the seed cannot overwrite an existing provider value.
+- Targeted ESLint and the production Next.js build passed under pinned Node 22.23.0.
+- The market-data audit passed with zero errors and confirmed every versioned baseline date is present. Five unrelated freshness warnings remained for the prior CBBC publication/live Futu cache and completed-session backtest tails while local OpenD was not running.
+- The production Main Data page rendered `L 211 / S 112 · 2025-12-09–2026-10-20`; the five-second countdown reset from 1 to 3 seconds while the full history remained visible.

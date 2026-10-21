@@ -15,6 +15,7 @@
     "worker:public": "node ./scripts/public_data_worker.js",
     "lint": "eslint",
     "test:public-security": "node ./scripts/test_public_security.js",
+    "test:money-flow-seed": "node ./scripts/test_money_flow_seed.js",
     "audit:market-data": "node --env-file-if-exists=.env.local skills/audit-real-market-data/scripts/audit_market_data.js",
     "fetch": "node --env-file-if-exists=.env.local ./scripts/cbbc_fetch.js",
     "fetch:watch": "node --env-file-if-exists=.env.local ./scripts/fetch_watch.js",

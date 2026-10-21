@@ -64,6 +64,7 @@ Set `TRADING_TOOLS_DATA_DIR` to use a private data directory outside the checkou
   - `money_flow_short`, `money_flow_short_meta`
   - `hsi_open_interest`, `hsi_open_interest_meta`
   - `cbbc_meta`, `cbbc_rows`
+- The repository includes a versioned CITIC HSI money-flow baseline: 211 long rows from 2025-12-09 through 2026-10-20 and 112 short rows from 2026-05-11 through 2026-10-20. Database initialization inserts any missing baseline dates without overwriting newer provider values, so a fresh deployment does not need a separate seed database.
 - Private JSON mirrors are for inspection only. SQLite is the application source of truth. No generated market data is written under `public/`.
 - Refresh buttons call:
   - `POST /api/cbbc/refresh` → fetch JP/SocGen data, upsert DB, write JSON mirror.
@@ -123,7 +124,7 @@ Set `TRADING_TOOLS_DATA_DIR` to use a private data directory outside the checkou
 
 ## Windows Server deployment
 
-The supported VPS layout and PowerShell installer are documented in [`deploy/windows/README.md`](deploy/windows/README.md). The VPS starts with an empty private data directory and fetches fresh provider data; historical local databases are not part of the public repository or deployment.
+The supported VPS layout and PowerShell installer are documented in [`deploy/windows/README.md`](deploy/windows/README.md). The VPS starts with an empty private data directory, initializes the versioned non-private money-flow baseline, and fetches fresh provider data; private historical databases are not part of the public repository or deployment.
 
 Public deployments use two low-privilege processes: a loopback-only Next.js read server and a separate provider-refresh worker. Public HTTP requests cannot launch Python/Futu work or mutate shared data. The endpoint inventory, trust boundaries, confirmed remediations, and remaining risks are documented in [`SECURITY.md`](SECURITY.md).
 
