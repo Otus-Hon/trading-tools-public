@@ -72,6 +72,8 @@ powershell -ExecutionPolicy Bypass -File C:\TradingTools\app\deploy\windows\publ
 
 This publishes only `127.0.0.1:3000` on HTTPS port 443. It does not expose future loopback services. Funnel requires MagicDNS, tailnet HTTPS, and the Funnel node attribute. It only provides a hostname in the tailnet's `*.ts.net` domain, only supports public ports 443, 8443, and 10000, and has non-configurable bandwidth limits. On one VPS hostname, additional apps require a different supported public port or path mount; independent custom hostnames and many public apps are where a conventional reverse proxy or separate Tailscale nodes becomes justified. See the current [Tailscale Funnel documentation](https://tailscale.com/docs/features/tailscale-funnel).
 
+The publisher reruns the complete local deployment gate immediately before exposure. It refuses to enable Funnel unless SQLite/runtime access, limited task identities, task state, application health, the unique service-account verification record, and loopback-only port binding all pass again.
+
 Disable publication without stopping the private app:
 
 ```powershell

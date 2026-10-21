@@ -1068,3 +1068,16 @@ Implementation:
 - Report task-never-ran separately from application verification failure, including task state and hexadecimal Scheduler result while always keeping Funnel disabled.
 - Replace the nonexistent updater restart cmdlet with explicit stop/start operations.
 - Extend Windows Server CI from task registration alone to actual execution under the temporary non-administrator identity, with the same account-rights setup and cleanup.
+
+### 2026-10-21 — Gate public Funnel exposure on the complete verification suite
+
+User request:
+
+- Explain how to make the verified Windows deployment public and how to know that it is safe to expose.
+
+Implementation:
+
+- Changed the Funnel publisher to rerun the complete deployment verification immediately before changing public exposure, rather than checking only the health endpoint.
+- Refuse publication unless the dedicated account remains non-administrative, both limited tasks are running under its SID, the current service-account SQLite/data check exists, application health is ready, and port 3000 remains loopback-only.
+- Continue exposing only `http://127.0.0.1:3000` through Tailscale HTTPS on an explicitly allowed Funnel port; no Windows inbound firewall port is opened and OpenD remains unreachable from Funnel.
+- Require a successful Funnel status read after configuration and retain the documented one-command disable operation.
