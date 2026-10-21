@@ -16,7 +16,7 @@ if ($existing) {
     -AccountNeverExpires `
     -PasswordNeverExpires `
     -UserMayNotChangePassword `
-    -Description "Low-privilege Trading Tools web and data worker account" | Out-Null
+    -Description "Limited Trading Tools web/worker account" | Out-Null
 }
 
 $account = "$env:COMPUTERNAME\$UserName"

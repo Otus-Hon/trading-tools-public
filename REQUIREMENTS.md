@@ -952,6 +952,7 @@ Diagnosis:
 - The SQLite repair re-probed the native module in the same Node process that had already failed to load it, so a successful rebuild was not independently verified.
 - The security test spawned the `npm.cmd` command shim directly. Current Windows Node process spawning rejects that batch-command path with `EINVAL` unless a shell is introduced.
 - `deploy.ps1` passed a `SecureString` through a new `powershell.exe -File` process. PowerShell serialized it as the text `System.Security.SecureString`, which cannot bind back to a secure-string parameter.
+- Windows also enforces a 48-character maximum for a local-user description; the original service-account description was 55 characters and would have become the next account-creation failure after fixing the secure-string handoff.
 
 Implementation:
 
@@ -959,6 +960,7 @@ Implementation:
 - Re-probe `better-sqlite3` in a fresh Node subprocess before and after repair, run a real query, and repeat the check after production pruning. Exact already-verified releases skip unnecessary npm/Python installation and rebuilding.
 - Launch the public-security Next server directly through `node.exe` and Next's JavaScript entry point, with bounded cross-platform shutdown and cleanup.
 - Keep the service password as a `SecureString` in one PowerShell runspace, use plaintext only transiently inside the Task Scheduler API call, never log or persist it, and reject administrator/SYSTEM principals.
+- Shortened the non-sensitive service-account description to fit the Windows local-account limit.
 - Added a one-time limited scheduled-task check proving the service identity can load SQLite and write/read the private data directory. Final verification also requires both limited tasks running, ready health, and a loopback-only listener; any failure leaves Funnel disabled.
 - Added a Windows Server 2022 GitHub Actions gate for the pinned Node ABI, a real SQLite read/write, production build, public-security suite, PowerShell parsing, secure-string account creation, and non-administrator membership.
 
