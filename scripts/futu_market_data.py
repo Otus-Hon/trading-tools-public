@@ -269,7 +269,7 @@ def fetch_cbbc(context):
         key=lambda item: (item["streetVolume"], item["tradedVolume"]),
         reverse=True,
     )
-    return ranked, int(expected_count), int(expected_count)
+    return ranked, int(expected_count), int(active_count)
 
 
 def main():

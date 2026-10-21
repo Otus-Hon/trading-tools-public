@@ -36,6 +36,7 @@ jobs:
           $env:TRADING_TOOLS_DATA_DIR = Join-Path $env:RUNNER_TEMP "trading-tools-data"
           node .\scripts\verify_runtime_access.js
           node .\deploy\windows\test-money-flow-import.js
+          node .\scripts\test_futu_cbbc_cache.js
       - name: Build public release
         run: npm run build
       - name: Run public-security integration tests

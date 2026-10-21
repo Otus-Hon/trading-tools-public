@@ -9,6 +9,34 @@ const { spawn } = require("node:child_process");
 const port = 4317;
 const origin = `http://127.0.0.1:${port}`;
 const tempData = fs.mkdtempSync(path.join(os.tmpdir(), "trading-tools-public-test-"));
+const cacheAt = Date.now();
+const verifiedCbbc = {
+  ok: true,
+  futuresContract: { selectionPolicy: "front_calendar_month_until_expiry_date_end_hkt" },
+  snapshots: { "HK.800000": { price: 24000, updateTime: "2026-10-21 14:00:00" } },
+  cbbcLevels: [
+    { side: "bear", price: 24500, products: 2, streetVolume: 2000000, tradedVolume: 100000 },
+    { side: "bull", price: 23500, products: 3, streetVolume: 3000000, tradedVolume: 200000 },
+  ],
+  cbbcTotal: 5,
+  cbbcActive: 5,
+  cbbcRowsFetched: 5,
+  cbbcComplete: true,
+  cbbcFetchedAt: "2026-10-21T14:00:00+08:00",
+};
+fs.writeFileSync(path.join(tempData, "futu_market_data_cache.json"), JSON.stringify({ at: cacheAt, payload: verifiedCbbc }));
+fs.writeFileSync(path.join(tempData, "futu_market_data_live_cache.json"), JSON.stringify({
+  at: cacheAt,
+  payload: {
+    ok: true,
+    liveOnly: true,
+    snapshots: { "HK.800000": { price: 24001, updateTime: "2026-10-21 14:00:05" } },
+    cbbcLevels: [],
+    cbbcTotal: 0,
+    cbbcRowsFetched: 0,
+    cbbcComplete: false,
+  },
+}));
 const nextBin = require.resolve("next/dist/bin/next");
 const child = spawn(process.execPath, [nextBin, "start", "--hostname", "127.0.0.1", "--port", String(port)], {
   cwd: process.cwd(),
@@ -83,9 +111,14 @@ async function main() {
   await expectStatus("/api/markets/chart?symbol=http%3A%2F%2F127.0.0.1%3A11111", 400);
   await expectStatus(`/api/hsi?${"x".repeat(600)}`, 414);
 
-  const noCache = await expectStatus("/api/futu/market-data?live=1", 503);
-  const noCacheText = await noCache.text();
-  assert.doesNotMatch(noCacheText, /must-not-run-python|TradingTools|\\Users\\|\/Users\//);
+  const liveCache = await expectStatus("/api/futu/market-data?live=1", 200);
+  const livePayload = await liveCache.json();
+  assert.equal(livePayload.snapshots["HK.800000"].price, 24001);
+  assert.equal(livePayload.cbbcComplete, true);
+  assert.equal(livePayload.cbbcRowsFetched, 5);
+  assert.equal(livePayload.cbbcTotal, 5);
+  assert.equal(livePayload.cbbcLevels.length, 2);
+  assert.doesNotMatch(JSON.stringify(livePayload), /must-not-run-python|TradingTools|\\Users\\|\/Users\//);
 
   const cbbc = await expectStatus("/api/cbbc/latest", 404);
   assert.doesNotMatch(await cbbc.text(), /https?:\/\/|stack|ENOENT/i);

@@ -1110,3 +1110,32 @@ Verification:
 - Imported that real seed into an isolated Node `22.23.0` target and verified the same counts/ranges, a passing post-import integrity check, one 64-character audit hash, an online backup, and an enforced history-baseline file.
 - Ran the deterministic importer twice under Node `22.23.0`; merge precedence, idempotence, unique backups, audit records, baseline output, and SQLite integrity all passed.
 - `npm run audit:market-data` passed with 0 errors. Its 5 warnings were pre-existing stale workstation Futu/backtest caches and did not concern the current CITIC money-flow history, which the audit reported as 211 long and 112 short rows through `2026-10-20`.
+
+### 2026-10-21 — Repair public money-flow visibility, exact CBBC Detail, and dashboard clipping
+
+User request:
+
+- Diagnose why restored capital-flow history still did not appear, correct the empty/incorrect CBBC Detail presentation, improve the visibly clipped dashboard UI, and verify that the displayed data is accurately fetched.
+
+Diagnosis:
+
+- Direct inspection of the public APIs proved the VPS still had only 19 long and 19 short CITIC rows (`2026-09-22`–`2026-10-20`); the private seed had not reached that VPS database, so this was not a chart-only defect.
+- The public full Futu cache was healthy and complete with 2,896/2,896 NORMAL-status products aggregated into 1,087 exact recovery-price levels, but the five-second live-only cache intentionally contained zero CBBC rows. Public mode returned that lightweight cache without merging the separately verified complete snapshot, so Detail blanked on every live poll.
+- Compact stock cards forced symbol, price, and percentage onto one narrow row, truncating `0700`, `9988`, and `0005`. Dense CBBC labels used only two lanes and overlapped when adjacent recovery prices mapped fewer than 15 pixels apart.
+
+Implementation:
+
+- Merge the latest complete disk-backed CBBC universe into public live-only Futu responses; reject any CBBC payload unless its fetched product count equals the provider total.
+- Select the nine highest-street-volume exact recovery prices independently for bears and bulls within 1,800 HSI points, preventing one side from crowding the other out while retaining exact Futu prices and HKD-volume aggregation.
+- Correct `cbbcActive` to report the counted NORMAL-status products rather than copying the provider total.
+- Show the visible CITIC SQLite long/short counts and coverage, the complete Futu product count in Detail, and the JPM outstanding/publication dates in General so source scope and freshness are inspectable in the UI.
+- Spread dense CBBC value tags across four collision lanes while keeping every tag on its exact price-line Y coordinate.
+- Stack compact stock-card symbols above their quote tuple and use a responsive minimum sidebar width, eliminating the clipped one-character symbols.
+- Added pure merge/selection tests and an end-to-end public-mode cache test proving a live-only snapshot receives only a completeness-verified CBBC universe without launching Python.
+
+Verification:
+
+- Pinned Node `22.23.0` production build and TypeScript checks passed; public-security integration tests and the new CBBC merge/selection tests passed.
+- Browser verification against an isolated copy of the real 211/112-row private SQLite database rendered the full capital-flow history, 18 exact Futu Detail levels (9 per side), readable collision lanes, complete `2,896/2,896` provenance, and unclipped `0700`/`9988`/`0005` cards.
+- Two public live-only reads 6 seconds apart advanced from `2026-10-21T14:15:06+08:00` to `14:15:16+08:00`; Futu `HK.800000` moved from 23,700.24 to 23,700.65 and `HK.HSImain` moved from 23,718 to 23,717 while open interest remained truthfully unchanged at 138,952.
+- The market-data audit passed with 0 errors. Five warnings remain limited to stale workstation Futu/backtest caches; the independently queried public feed was current, and the audit confirmed the private CITIC history at 211 long/112 short rows through `2026-10-20`.

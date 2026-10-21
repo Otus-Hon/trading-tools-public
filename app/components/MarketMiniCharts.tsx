@@ -356,10 +356,10 @@ function MiniChart({
 
   return (
     <section className={`relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-sm ${compact ? "px-2 py-1.5" : "px-3 py-2"}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className={`truncate font-bold leading-tight text-[var(--text)] ${compact ? "text-[12px]" : "text-[13px]"}`}>{market.label}</div>
+      <div className={compact ? "grid gap-0.5" : "flex items-start justify-between gap-2"}>
+        <div className={`font-bold leading-tight text-[var(--text)] ${compact ? "text-[11px]" : "truncate text-[13px]"}`}>{market.label}</div>
         <div
-          className={`shrink-0 text-right font-semibold leading-tight tabular-nums ${compact ? "text-[11px]" : "text-[12px]"}`}
+          className={`shrink-0 font-semibold leading-tight tabular-nums ${compact ? "text-left text-[11px]" : "text-right text-[12px]"}`}
           title={verifiedQuote
             ? `Futu ${verifiedQuote.updateTime} · previous close ${verifiedQuote.previousClose ?? "unavailable"}`
             : requiresFutuQuote ? "Waiting for verified Futu quote" : "Daily provider close"}

@@ -24,6 +24,11 @@ import {
 } from "@/lib/cbbcKnockout";
 import HsiIntradayModal from "./HsiIntradayModal";
 import FuturesExpiryProgress from "./FuturesExpiryProgress";
+import futuCbbcModule from "../../lib/futuCbbc.js";
+
+const { selectDetailCbbcLevels } = futuCbbcModule as unknown as {
+  selectDetailCbbcLevels: (data: FutuMarketPayload, cashPrice: number, perSide?: number) => FutuMarketPayload["cbbcLevels"];
+};
 
 type Candle = {
   time: string;
@@ -51,6 +56,10 @@ type CbbcResponse = {
   bullRows?: CbbcRow[];
   todayHigh?: number | null;
   todayLow?: number | null;
+  meta?: {
+    sdate?: string | null;
+    stime?: string | null;
+  };
 };
 
 type MoneyFlowRow = {
@@ -60,6 +69,8 @@ type MoneyFlowRow = {
 
 type MoneyFlowResponse = {
   rows?: MoneyFlowRow[];
+  row_count?: number;
+  fetched_at_utc?: string | null;
 };
 
 type KnockoutAlert = {
@@ -122,9 +133,7 @@ type FutuMarketPayload = {
 
 function adaptFutuCbbc(data: FutuMarketPayload): CbbcResponse {
   const cashPrice = Number(data.snapshots?.["HK.800000"]?.price);
-  const levels = (Array.isArray(data.cbbcLevels) ? data.cbbcLevels : [])
-    .filter((level) => Number.isFinite(level.price) && (!Number.isFinite(cashPrice) || Math.abs(level.price - cashPrice) <= 1800))
-    .slice(0, 18);
+  const levels = selectDetailCbbcLevels(data, cashPrice, 9) ?? [];
   return {
     bearRows: levels.filter((level) => level.side === "bear").map((level) => ({
       start: level.price - 1,
@@ -292,6 +301,12 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
     max: null,
   });
   const [moneyflowError, setMoneyflowError] = useState<string | null>(null);
+  const [moneyflowCoverage, setMoneyflowCoverage] = useState<{
+    longRows: number;
+    shortRows: number;
+    firstDate: string | null;
+    lastDate: string | null;
+  } | null>(null);
 
   // CBBC knockout alerts. knockedOutRef holds the set of strikes already knocked
   // out; null means "not seeded yet" so the first poll establishes a baseline
@@ -349,24 +364,15 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
     const candleRegionBottom = mainPaneHeight * 0.8 - labelHalfHeight;
     const containerWidth = containerRef.current?.clientWidth ?? 0;
     const laneRight = Math.max(0, containerWidth - 112);
-    const columnGap = 8;
+    const columnGap = 7;
     const columnWidth = 38;
     const rightColumnX = Math.max(12, laneRight - columnWidth);
-    const leftColumnX = Math.max(12, rightColumnX - columnWidth - columnGap);
-    const maxVolumeBySide = cbbcLabelLevelsRef.current.reduce(
-      (acc, item) => {
-        acc[item.side] = Math.max(acc[item.side], item.volume);
-        return acc;
-      },
-      { bear: 1, bull: 1 } as Record<"bear" | "bull", number>
-    );
     const { high, low } = lastLiveRef.current;
     const next = cbbcLabelLevelsRef.current
       .map((item) => {
         const y = series.priceToCoordinate?.(item.level);
         if (y === null || y === undefined || !Number.isFinite(y)) return null;
         if (y < labelHalfHeight || y > candleRegionBottom) return null;
-        const ratio = Math.min(1, Math.max(0, item.volume / maxVolumeBySide[item.side]));
         const knockedOut = cbbcLevelKnockedOut(item, high, low);
         return {
           key: `${item.side}:${item.level}`,
@@ -376,13 +382,25 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
           level: item.level,
           trigger: item.trigger,
           volume: item.volume,
-          x: ratio >= 0.5 ? rightColumnX : leftColumnX,
+          x: rightColumnX,
           y,
           color: colorForCbbcLine(item.side, item.trigger, high, low),
           knockedOut,
         };
       })
-      .filter((item): item is CbbcLineLabel => item !== null);
+      .filter((item): item is CbbcLineLabel => item !== null)
+      .sort((a, b) => a.y - b.y);
+
+    // Adjacent 100-point bands can be fewer pixels apart than a label is tall.
+    // Keep the label anchored at the exact price-line Y coordinate, but spread
+    // collisions across four horizontal lanes so values remain readable.
+    const laneLastY = [-Infinity, -Infinity, -Infinity, -Infinity];
+    for (const item of next) {
+      let lane = laneLastY.findIndex((lastY) => item.y - lastY >= 16);
+      if (lane < 0) lane = laneLastY.indexOf(Math.min(...laneLastY));
+      item.x = Math.max(12, rightColumnX - lane * (columnWidth + columnGap));
+      laneLastY[lane] = item.y;
+    }
 
     // Keep the DOM labels on the exact coordinate returned by the price series.
     // Direct style writes avoid the React render / animation-frame delay that
@@ -1620,12 +1638,24 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
       const longPoints = coloriseLong(alignToCandles(longDaily));
       moneyflowSeriesRef.current.setData(longPoints);
 
+      let shortData: MoneyFlowResponse = {};
       if (shortRes.ok && moneyflowShortSeriesRef.current) {
-        const shortData = (await shortRes.json()) as MoneyFlowResponse;
+        shortData = (await shortRes.json()) as MoneyFlowResponse;
         const shortDaily = toDailyPoints(Array.isArray(shortData?.rows) ? shortData.rows : []);
         const shortPoints = coloriseShort(alignToCandles(shortDaily));
         moneyflowShortSeriesRef.current.setData(shortPoints);
       }
+
+      const allDates = [...(longData.rows ?? []), ...(shortData.rows ?? [])]
+        .map((row) => row.date?.slice(0, 10) ?? "")
+        .filter(Boolean)
+        .sort();
+      setMoneyflowCoverage({
+        longRows: Number(longData.row_count ?? longData.rows?.length ?? 0),
+        shortRows: Number(shortData.row_count ?? shortData.rows?.length ?? 0),
+        firstDate: allDates[0] ?? null,
+        lastDate: allDates.at(-1) ?? null,
+      });
 
       diag("HSI", "money flow updated", { longPoints: longPoints.length, interval: "1d" });
       return true;
@@ -1913,8 +1943,30 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
         )}
       </div>
       <div className="mt-1 min-h-[28px] text-[10px] leading-[14px]">
-        <div className="text-[var(--muted)]">
-          好倉資金流 / 淡倉資金流 — Blue: inflow, Red: outflow (million)
+        <div className="flex flex-wrap items-center justify-between gap-x-3 text-[var(--muted)]">
+          <span>好倉資金流 / 淡倉資金流 — Blue: inflow, Red: outflow (HKD million)</span>
+          {moneyflowCoverage && (
+            <span className="tabular-nums">
+              CITIC SQLite · L {moneyflowCoverage.longRows} / S {moneyflowCoverage.shortRows}
+              {moneyflowCoverage.firstDate && moneyflowCoverage.lastDate
+                ? ` · ${moneyflowCoverage.firstDate}–${moneyflowCoverage.lastDate}`
+                : ""}
+            </span>
+          )}
+          {useFutuData && cbbcView === "detail" && liveCbbcPayload?.cbbcComplete === true && (
+            <span className="tabular-nums">
+              Futu exact CBBC · {Number(liveCbbcPayload.cbbcRowsFetched ?? 0).toLocaleString("en-US")}/{Number(liveCbbcPayload.cbbcTotal ?? 0).toLocaleString("en-US")} products
+            </span>
+          )}
+          {useFutuData && cbbcView === "detail" && liveCbbcPayload && liveCbbcPayload.cbbcComplete !== true && (
+            <span className="font-semibold text-amber-700">Futu exact CBBC unavailable · incomplete universe rejected</span>
+          )}
+          {useFutuData && cbbcView === "general" && generalCbbcPayload?.meta?.sdate && (
+            <span className="tabular-nums">
+              JPM 100-point bands · outstanding {generalCbbcPayload.meta.sdate}
+              {generalCbbcPayload.meta.stime ? ` · published ${generalCbbcPayload.meta.stime}` : ""}
+            </span>
+          )}
         </div>
         <div className={moneyflowError ? "text-red-600" : "invisible"} aria-live="polite">
           {moneyflowError ?? "Money flow loaded"}

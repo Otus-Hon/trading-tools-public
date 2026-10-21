@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import pythonPathModule from "../../../../lib/pythonPath.js";
 import publicModeModule from "../../../../lib/publicMode.js";
 import futuDiskCacheModule from "../../../../lib/futuDiskCache.js";
+import futuCbbcModule from "../../../../lib/futuCbbc.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,10 @@ const futuDiskCache = futuDiskCacheModule as unknown as {
   persistFutuOpenInterest: (payload: Payload) => void;
 };
 const EXPIRY_SELECTION_POLICY = futuDiskCache.EXPIRY_SELECTION_POLICY;
+const { hasCompleteCbbc, mergeVerifiedCbbcPayload } = futuCbbcModule as unknown as {
+  hasCompleteCbbc: (payload: Payload | null | undefined) => boolean;
+  mergeVerifiedCbbcPayload: (payload: Payload, verifiedPayload: Payload | null | undefined) => Payload;
+};
 
 try {
   const saved = futuDiskCache.readFullCache();
@@ -99,17 +104,7 @@ function runBridge(liveOnly: boolean, cbbcOnly = false): Promise<Payload> {
 }
 
 function mergeVerifiedCbbc(payload: Payload): Payload {
-  if (!cbbcCache?.payload.ok) return payload;
-  const cbbc = cbbcCache.payload;
-  return {
-    ...payload,
-    cbbcLevels: cbbc.cbbcLevels,
-    cbbcTotal: cbbc.cbbcTotal,
-    cbbcActive: cbbc.cbbcActive,
-    cbbcRowsFetched: cbbc.cbbcRowsFetched,
-    cbbcComplete: cbbc.cbbcComplete,
-    cbbcFetchedAt: cbbc.cbbcFetchedAt,
-  };
+  return mergeVerifiedCbbcPayload(payload, cbbcCache?.payload);
 }
 
 function ensureCbbcRefresh(now: number): Promise<Payload> | null {
@@ -143,10 +138,16 @@ function ensureCbbcRefresh(now: number): Promise<Payload> | null {
 export async function GET(request: NextRequest) {
   const liveOnly = request.nextUrl.searchParams.get("live") === "1";
   if (isPublicMode()) {
+    // The worker intentionally writes a lightweight five-second cache without
+    // CBBC pagination. Re-read the complete disk cache on every request and
+    // merge its verified universe into that live tuple. Keeping only the
+    // lightweight payload made the Detail tab receive zero recovery levels.
+    const verified = futuDiskCache.readFullCache();
+    if (hasCompleteCbbc(verified?.payload)) cbbcCache = verified;
     const cached = liveOnly ? futuDiskCache.readLiveCache() : futuDiskCache.readFullCache();
     if (cached?.payload) {
       return NextResponse.json(
-        { ...cached.payload, cached: true },
+        { ...mergeVerifiedCbbc(cached.payload), cached: true },
         { headers: { "Cache-Control": "no-store" } }
       );
     }
