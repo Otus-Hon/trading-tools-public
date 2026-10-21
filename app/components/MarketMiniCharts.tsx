@@ -426,11 +426,11 @@ function MiniChart({
 export default function MarketMiniCharts() {
   return (
     <aside
-      className="grid h-full min-h-0 gap-2"
+      className="grid h-full min-h-0 gap-3"
       style={{ gridTemplateRows: "0.85fr 1.15fr 0.9fr repeat(3, minmax(0, 1fr))" }}
       aria-label="Related daily markets"
     >
-      <div className="grid min-h-0 min-w-0 grid-cols-3 gap-2">
+      <div className="grid min-h-0 min-w-0 grid-cols-3 gap-3">
         {TOP_MARKETS.map((market) => (
           <MiniChart
             key={market.label}
@@ -441,7 +441,7 @@ export default function MarketMiniCharts() {
         ))}
       </div>
       <MiniChart market={HSTECH_MARKET} />
-      <div className="grid min-h-0 min-w-0 grid-cols-2 gap-2">
+      <div className="grid min-h-0 min-w-0 grid-cols-2 gap-3">
         {FX_MARKETS.map((market) => <MiniChart key={market.label} market={market} compact />)}
       </div>
       {LOWER_MARKETS.map((market) => <MiniChart key={market.label} market={market} />)}

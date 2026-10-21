@@ -1160,3 +1160,19 @@ Verification:
 - Targeted ESLint and the production Next.js build passed under pinned Node 22.23.0.
 - The market-data audit passed with zero errors and confirmed every versioned baseline date is present. Five unrelated freshness warnings remained for the prior CBBC publication/live Futu cache and completed-session backtest tails while local OpenD was not running.
 - The production Main Data page rendered `L 211 / S 112 · 2025-12-09–2026-10-20`; the five-second countdown reset from 1 to 3 seconds while the full history remained visible.
+
+### 2026-10-21 — Add breathing room between related-market cards
+
+User request:
+
+- Add more margin between the compact related-market cards shown on the Main Data dashboard.
+
+Implementation:
+
+- Increased the related-market dashboard grid gutters from 8 pixels to 12 pixels, consistently covering the compact stock row, the compact FX row, and the vertical spacing between chart rows.
+- Preserved the responsive column sizing, chart behavior, data sources, and internal card padding.
+
+Verification:
+
+- Targeted lint and production-build checks passed under the pinned Node version.
+- Browser inspection confirmed visible, even spacing between the `0700`, `9988`, and `0005` cards without symbol clipping.
