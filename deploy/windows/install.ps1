@@ -36,6 +36,8 @@ Set-Location $repositoryRoot
 & npm.cmd ci
 & npm.cmd run build
 & npm.cmd run test:public-security
+& npm.cmd audit --omit=dev --audit-level=high
+& npm.cmd prune --omit=dev
 
 Write-Host ""
 Write-Host "Trading Tools is built. Next run:"

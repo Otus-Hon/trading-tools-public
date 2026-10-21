@@ -51,6 +51,6 @@ All other mutating API methods are denied by middleware in public mode. Requests
 - In-process rate limiting resets on restart and is suitable for one Windows process, not a multi-node deployment.
 - The worker necessarily has read access to the Futu Python environment and write access to Trading Tools data. Keep the account out of Administrators and deny interactive/RDP logon.
 - SQLite availability depends on the VPS disk. Back up `C:\TradingTools\data` with a VPS-level, access-controlled backup policy.
-- Dependency advisories and the Windows/Tailscale/OpenD patch level require ongoing review.
+- Dependency advisories and the Windows/Tailscale/OpenD patch level require ongoing review. The installer audits production dependencies, then prunes development-only packages after the build and tests.
 
 Report suspected vulnerabilities privately to the repository owner; do not include credentials, account numbers, or production data in a public issue.
