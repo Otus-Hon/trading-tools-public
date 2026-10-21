@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Real Market Data"
+  short_description: "Verify data sources, freshness, and integrity"
+  default_prompt: "Use $audit-real-market-data to audit this trading dashboard for source mismatches, stale values, and persistence corruption."

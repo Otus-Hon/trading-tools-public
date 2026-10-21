@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+:root {
+  /* Claude-like neutral palette */
+  --bg: #faf9f6; /* rgb(250, 249, 246) */
+  --card: #fdfbf7;
+  --text: #141413; /* rgb(20, 20, 19) */
+  --muted: #6f6458;
+  --border: #e6e0d6;
+  --shadow: 0 10px 24px rgba(20, 20, 19, 0.08);
+  --background: var(--bg);
+  --foreground: var(--text);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 28%),
+    radial-gradient(circle at 18% 8%, rgba(230, 222, 210, 0.45), transparent 40%),
+    radial-gradient(circle at 82% 6%, rgba(215, 208, 196, 0.35), transparent 36%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.dashboard {
+  max-width: none;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.card-title {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card-muted {
+  color: var(--muted);
+}
+
+.dashboardGrid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+  grid-template-rows: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: 16px;
+  grid-template-areas:
+    ". . tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview . ."
+    ". . tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview . ."
+    ". . tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview . ."
+    ". . tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview . ."
+    ". . tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview . ."
+    ". . tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview tradingview . ."
+    ". . . . . . . . . . . . . . . . . ."
+    ". . . . . . . . . . . . . . . . . ."
+    ". . . . . . . . . . . . . . . . . ."
+    ". . . . . . . . . . . . . . . . . ."
+    ". . . . . . . . . . . . . . . . . ."
+    ". . . . . . . . . . . . . . . . . .";
+  align-items: start;
+}
+
+.tradingviewArea {
+  grid-area: tradingview;
+}
+
+@media (max-width: 767px) {
+  .dashboardGrid {
+    display: block;
+  }
+}

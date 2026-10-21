@@ -1,0 +1,6 @@
+$env:NODE_ENV = "production"
+$env:PORT = "3000"
+$env:TRADING_TOOLS_DATA_DIR = "C:\TradingTools\data"
+$env:FUTU_PYTHON = "C:\TradingTools\python\.venv\Scripts\python.exe"
+$env:FUTU_HOST = "127.0.0.1"
+$env:FUTU_PORT = "11111"
