@@ -34,7 +34,7 @@ Set-Location C:\TradingTools\app
 powershell -ExecutionPolicy Bypass -File .\deploy\windows\deploy.ps1
 ```
 
-The account and task scripts prompt for the dedicated account password. The password is passed to Windows Task Scheduler and is not written to the repository or `production.ps1`. The web task listens on `127.0.0.1:3000`; the independent worker performs provider refreshes. Both run with limited privileges and restart after failures.
+The deployment generates a random 48-character password for the dedicated account. It is never displayed, logged, or placed on a process command line. A DPAPI-encrypted `PSCredential` is saved at `C:\TradingTools\config\TradingToolsSvc.credential.xml`, restricted to local Administrators and SYSTEM; `TradingToolsSvc` cannot read that file. Task Scheduler receives the credential through its PowerShell API. Use `-RotateServicePassword` to replace it or `-PromptForPassword` only when manual entry is explicitly desired. The web task listens on `127.0.0.1:3000`; the independent worker performs provider refreshes. Both run with limited privileges and restart after failures.
 
 The installer stops only the `TradingToolsWeb`/`TradingToolsWorker` tasks and app-scoped Node processes before changing native modules. It does not stop or reinstall OpenD, Tailscale, the existing Python environment when healthy, or unrelated applications. Runtime databases, configuration, and logs remain outside the checkout. An exact already-verified release skips npm installation and rebuilding.
 
@@ -94,7 +94,7 @@ From Administrator PowerShell, this single command downloads the reviewed releas
 Set-Location C:\TradingTools\app; git pull --ff-only; if ($LASTEXITCODE -eq 0) { powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\windows\deploy.ps1 }
 ```
 
-The password prompt is for the dedicated `TradingToolsSvc` account. Input is a `SecureString`; the password is not placed in a process command line, configuration file, log, or Git. Publication is still a separate explicit action.
+No password prompt is required by default. Publication is still a separate explicit action.
 
 If installation completed through the final SQLite check but account setup rejected the password, pull the latest scripts and resume without reinstalling or rebuilding:
 
@@ -102,7 +102,7 @@ If installation completed through the final SQLite check but account setup rejec
 Set-Location C:\TradingTools\app; git pull --ff-only; if ($LASTEXITCODE -eq 0) { powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\windows\deploy.ps1 -Resume }
 ```
 
-Resume is accepted only when the completed build stamp and dependency lock match, no application build input changed, the production build exists, and SQLite still loads. A deployment-script/documentation-only update is allowed. Windows password-policy rejection permits up to three hidden retries and never weakens the server policy.
+Resume is accepted only when the completed build stamp and dependency lock match, no application build input changed, the production build exists, and SQLite still loads. A deployment-script/documentation-only update is allowed. If Windows rejects an automatically generated credential, deployment generates another without displaying it; the server policy is never weakened.
 
 ### Windows failure causes addressed
 

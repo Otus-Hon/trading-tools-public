@@ -1001,3 +1001,17 @@ Implementation:
 - Added up to three hidden `SecureString` password attempts when Windows specifically returns `InvalidPassword`. Rejected values are discarded without logging, persistence, or process-command-line exposure; other account errors still stop immediately.
 - Preserved the separate final gates for a non-admin limited principal, service-account SQLite/data-directory access, scheduled-task identity, application health, and loopback-only listening. Funnel remains a separate explicit action.
 - Confirmed the apparent npm discrepancy is intentional: the initial five advisories are confined to the build-only development graph, while `npm audit --omit=dev` validates the production graph at zero vulnerabilities and `npm prune --omit=dev` removes build-only packages before runtime.
+
+### 2026-10-21 — Generate and protect the Windows service password
+
+User request:
+
+- Generate a strong service-account password automatically and save it privately because the user does not want to invent or type one.
+
+Implementation:
+
+- Generate a cryptographically random 48-character password containing uppercase, lowercase, numeric, and symbol characters, excluding visually ambiguous characters.
+- Convert the value immediately to `SecureString`, never print it, and store a DPAPI-encrypted `PSCredential` under `C:\TradingTools\config` rather than the worker-writable market-data directory.
+- Remove inherited access from the credential file and grant access only to local Administrators and SYSTEM. Reapply that file ACL after broader read permissions are granted to `TradingToolsSvc`, so the limited service identity cannot read its saved credential.
+- Load the encrypted credential automatically for resume and later deployments. Added explicit rotation and manual-prompt switches for recovery without changing Windows password policy.
+- Extended Windows Server CI to generate, ACL-protect, reload, length-check, and use the encrypted credential to create a temporary non-administrator service account.

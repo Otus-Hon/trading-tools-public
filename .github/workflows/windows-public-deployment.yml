@@ -46,13 +46,27 @@ jobs:
             [void][ScriptBlock]::Create((Get-Content $_.FullName -Raw))
           }
           $testUser = "TTCI$($env:GITHUB_RUN_ATTEMPT)$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
-          $password = ConvertTo-SecureString ([Guid]::NewGuid().ToString() + "aA1!") -AsPlainText -Force
+          $credentialPath = "C:\TradingTools\config\$testUser.credential.xml"
           try {
-            & .\deploy\windows\setup-service-account.ps1 -UserName $testUser -Password $password
+            $credential = & .\deploy\windows\get-service-credential.ps1 `
+              -ServiceUser $testUser `
+              -CredentialPath $credentialPath
+            $reloaded = & .\deploy\windows\get-service-credential.ps1 `
+              -ServiceUser $testUser `
+              -CredentialPath $credentialPath
+            if ($reloaded.GetNetworkCredential().Password.Length -lt 48) { throw "Generated password is too short." }
+            & .\deploy\windows\setup-service-account.ps1 -UserName $testUser -Password $reloaded.Password
             $member = Get-LocalGroupMember -Group (Get-LocalGroup -SID "S-1-5-32-544") -ErrorAction SilentlyContinue |
               Where-Object { $_.SID.Value -eq (Get-LocalUser -Name $testUser).SID.Value }
             if ($member) { throw "Test service account unexpectedly has administrator membership." }
+            $testSid = (Get-LocalUser -Name $testUser).SID.Value
+            $credentialAccess = (Get-Acl $credentialPath).Access | Where-Object {
+              $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value -eq $testSid
+            }
+            if ($credentialAccess) { throw "Service account can read its protected credential file." }
           } finally {
             Remove-LocalUser -Name $testUser -ErrorAction SilentlyContinue
-            $password = $null
+            Remove-Item $credentialPath -Force -ErrorAction SilentlyContinue
+            $credential = $null
+            $reloaded = $null
           }

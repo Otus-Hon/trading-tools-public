@@ -35,5 +35,11 @@ foreach ($target in @("C:\TradingTools\data", "C:\TradingTools\logs")) {
   if (Test-Path $target) { & icacls.exe $target /grant "${account}:(OI)(CI)M" /T /C | Out-Null }
 }
 
+foreach ($credentialFile in @(Get-ChildItem "C:\TradingTools\config\*.credential.xml" -ErrorAction SilentlyContinue)) {
+  & (Join-Path $PSScriptRoot "protect-service-credential.ps1") `
+    -CredentialPath $credentialFile.FullName `
+    -ServiceUser $UserName
+}
+
 Write-Host "$account is configured without administrator-group membership."
 Write-Host "Deny this account local and Remote Desktop logon in Local Security Policy; keep 'Log on as a batch job' available."

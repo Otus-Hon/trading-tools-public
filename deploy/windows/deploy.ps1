@@ -1,6 +1,8 @@
 param(
   [string]$ServiceUser = "TradingToolsSvc",
-  [switch]$Resume
+  [switch]$Resume,
+  [switch]$RotateServicePassword,
+  [switch]$PromptForPassword
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,17 +40,39 @@ if ($Resume) {
 }
 
 $credential = $null
+$credentialPath = "C:\TradingTools\config\$ServiceUser.credential.xml"
 for ($attempt = 1; $attempt -le 3; $attempt += 1) {
-  $password = Read-Host "Password for the dedicated $ServiceUser account" -AsSecureString
+  if ($PromptForPassword) {
+    $password = Read-Host "Password for the dedicated $ServiceUser account" -AsSecureString
+    $candidate = [System.Management.Automation.PSCredential]::new(".\$ServiceUser", $password)
+  } else {
+    $rotateThisAttempt = $RotateServicePassword -or $attempt -gt 1
+    $candidate = & (Join-Path $PSScriptRoot "get-service-credential.ps1") `
+      -ServiceUser $ServiceUser `
+      -CredentialPath $credentialPath `
+      -Rotate:$rotateThisAttempt
+    $password = $candidate.Password
+  }
   try {
     & (Join-Path $PSScriptRoot "setup-service-account.ps1") -UserName $ServiceUser -Password $password
-    $credential = [System.Management.Automation.PSCredential]::new(".\$ServiceUser", $password)
+    $credential = $candidate
+    if ($PromptForPassword) {
+      $credential | Export-Clixml -Path $credentialPath -Force
+      & (Join-Path $PSScriptRoot "protect-service-credential.ps1") `
+        -CredentialPath $credentialPath `
+        -ServiceUser $ServiceUser
+    }
     break
   } catch {
     $passwordRejected = $_.FullyQualifiedErrorId -match "InvalidPassword" -or $_.Exception.GetType().Name -match "InvalidPassword"
     $password = $null
+    $candidate = $null
     if (-not $passwordRejected -or $attempt -eq 3) { throw }
-    Write-Warning "Windows rejected that password under the server's password policy. Enter a different strong password; it was not stored or logged."
+    if ($PromptForPassword) {
+      Write-Warning "Windows rejected that password under the server's password policy. Enter a different strong password; it was not stored or logged."
+    } else {
+      Write-Warning "Windows rejected the generated password. Generating a different strong credential without displaying it."
+    }
   }
 }
 if (-not $credential) { throw "The dedicated service account was not configured." }
