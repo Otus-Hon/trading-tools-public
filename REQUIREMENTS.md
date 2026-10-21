@@ -1097,7 +1097,7 @@ Diagnosis:
 Implementation:
 
 - Added a money-flow-only SQLite seed importer that rejects corrupt databases, duplicate/invalid dates, invalid numeric values, and non-CITIC source URLs.
-- Require the seed to be transferred into an Administrators/SYSTEM-only import directory, create an online pre-import backup under an equally restricted VPS directory, then merge missing long/short dates atomically with existing VPS rows taking precedence on overlaps.
+- Move the transferred seed into an Administrators/SYSTEM-only import directory, create an online pre-import backup under an equally restricted VPS directory, then merge missing long/short dates atomically with existing VPS rows taking precedence on overlaps.
 - Record the seed SHA-256, import time, row counts, and date coverage inside `money_flow_imports` for auditability and idempotence.
 - Verify SQLite integrity after import, confirm the running loopback APIs expose every stored row, and rerun the complete service-account, task, health, and loopback security gate.
 - Persist the verified long/short minimum row counts and date coverage outside the source tree; make all later deployment and Funnel verification fail closed if the running APIs fall below that baseline.

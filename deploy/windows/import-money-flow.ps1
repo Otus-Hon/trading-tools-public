@@ -1,6 +1,7 @@
 param([Parameter(Mandatory = $true)][string]$SeedPath)
 
 $ErrorActionPreference = "Stop"
+$resolvedSeed = (Resolve-Path $SeedPath -ErrorAction Stop).Path
 $configPath = "C:\TradingTools\config\production.ps1"
 $runtimePath = "C:\TradingTools\config\runtime-paths.ps1"
 $backupPath = "C:\TradingTools\backups"
@@ -14,13 +15,16 @@ if (-not (Test-Path $configPath) -or -not (Test-Path $runtimePath)) {
 if (-not (Test-Path $env:TRADING_TOOLS_NODE)) { throw "Pinned Node runtime is unavailable." }
 
 New-Item -ItemType Directory -Force -Path $importPath | Out-Null
-& icacls.exe $importPath /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null
+& icacls.exe $importPath /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Unable to protect the private seed-import directory." }
-$resolvedSeed = (Resolve-Path $SeedPath -ErrorAction Stop).Path
 $resolvedImportPath = (Resolve-Path $importPath -ErrorAction Stop).Path.TrimEnd("\") + "\"
 if (-not $resolvedSeed.StartsWith($resolvedImportPath, [StringComparison]::OrdinalIgnoreCase)) {
-  throw "The private seed must be placed inside $importPath."
+  $privateSeed = Join-Path $importPath "money-flow-seed-$([Guid]::NewGuid().ToString('N')).sqlite"
+  Move-Item -LiteralPath $resolvedSeed -Destination $privateSeed
+  $resolvedSeed = (Resolve-Path $privateSeed -ErrorAction Stop).Path
 }
+& icacls.exe $importPath /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Unable to protect the private seed file." }
 
 New-Item -ItemType Directory -Force -Path $backupPath | Out-Null
 & icacls.exe $backupPath /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null
