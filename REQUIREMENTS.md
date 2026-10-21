@@ -1044,3 +1044,27 @@ Implementation:
 - Keep the password inside the existing DPAPI-backed credential flow; it is exposed only transiently to the in-process Task Scheduler API and is never printed or placed on a process command line.
 - Added a Windows Server CI integration check that creates a temporary limited Scheduled Task with a generated local account, verifies the registered principal SID, and removes both safely.
 - Preserve the completed build, application data, OpenD, configuration, encrypted credential, and existing service account. Funnel remains disabled until final runtime verification succeeds.
+
+### 2026-10-21 — Make the Windows deployment self-verifying
+
+User request:
+
+- Stop requiring repeated manual diagnosis from broken terminal output; make sure the complete Windows deployment is functional and secure before asking the user to publish it.
+
+Diagnosis:
+
+- Scheduled Task result `267011` is `0x00041303` (“task has not yet run”), but the deployment mislabeled it as a SQLite/data-directory failure.
+- Account setup printed manual Local Security Policy instructions instead of enforcing the exact rights required by the service identity.
+- Runtime scripts depended on the administrator's `PATH` and `npm.cmd`, which are not reliable in a different local account's noninteractive Task Scheduler session.
+- The updater referenced nonexistent `Restart-ScheduledTask`, another cmdlet error that would only appear on a future update.
+- The temporary runtime log was not tied to the current deployment attempt, allowing stale output to be mistaken for a fresh check.
+
+Implementation:
+
+- Configure only the dedicated account's required Windows rights: grant batch logon, remove a direct deny-batch assignment, and deny local and Remote Desktop interactive logon. Preserve every other account already present in those policies.
+- Enable the dedicated local account when necessary, keep it outside Administrators, and continue applying read-only application/configuration access plus modify access only to data and logs.
+- Pin the exact verified Node 22.23.0 and npm executables in an administrator-owned configuration file. Runtime tasks prepend that Node directory to their private `PATH` and start through the existing npm scripts; the worker and limited-account verifier also run an explicit fresh SQLite probe.
+- Give every limited-account runtime check a unique nonce, remove its old log before execution, and accept it only after the current task finishes successfully and writes the matching nonce plus the SQLite/data write-read result.
+- Report task-never-ran separately from application verification failure, including task state and hexadecimal Scheduler result while always keeping Funnel disabled.
+- Replace the nonexistent updater restart cmdlet with explicit stop/start operations.
+- Extend Windows Server CI from task registration alone to actual execution under the temporary non-administrator identity, with the same account-rights setup and cleanup.

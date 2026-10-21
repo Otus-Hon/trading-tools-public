@@ -46,8 +46,10 @@ jobs:
             [void][ScriptBlock]::Create((Get-Content $_.FullName -Raw))
           }
           foreach ($command in @(
-            "Get-ScheduledTask", "Register-ScheduledTask", "Start-ScheduledTask",
-            "Stop-ScheduledTask", "Unregister-ScheduledTask"
+            "Get-ScheduledTask", "Get-ScheduledTaskInfo", "Register-ScheduledTask",
+            "Start-ScheduledTask", "Stop-ScheduledTask", "Unregister-ScheduledTask",
+            "New-ScheduledTaskAction", "New-ScheduledTaskSettingsSet", "New-ScheduledTaskTrigger",
+            "Enable-LocalUser", "secedit.exe"
           )) {
             if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
               throw "Required Windows ScheduledTasks command is unavailable: $command"
@@ -86,6 +88,20 @@ jobs:
             $registeredTask = Get-ScheduledTask -TaskName $testTask
             $registeredSid = ([Security.Principal.NTAccount]$registeredTask.Principal.UserId).Translate([Security.Principal.SecurityIdentifier]).Value
             if ($registeredSid -ne $testSid) { throw "Scheduled Task principal does not match the local service account." }
+            Start-ScheduledTask -TaskName $testTask
+            $taskCompleted = $false
+            for ($attempt = 0; $attempt -lt 30; $attempt += 1) {
+              $registeredTask = Get-ScheduledTask -TaskName $testTask
+              $taskInfo = Get-ScheduledTaskInfo -TaskName $testTask
+              if ($taskInfo.LastRunTime -gt [DateTime]::MinValue -and $registeredTask.State -notin @("Running", "Queued")) {
+                $taskCompleted = $true
+                break
+              }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $taskCompleted -or $taskInfo.LastTaskResult -ne 0) {
+              throw "The temporary limited-account Scheduled Task did not execute successfully."
+            }
           } finally {
             Unregister-ScheduledTask -TaskName $testTask -Confirm:$false -ErrorAction SilentlyContinue
             Remove-LocalUser -Name $testUser -ErrorAction SilentlyContinue

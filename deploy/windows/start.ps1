@@ -3,14 +3,21 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $serverRoot = "C:\TradingTools"
 $configPath = Join-Path $serverRoot "config\production.ps1"
+$runtimePath = Join-Path $serverRoot "config\runtime-paths.ps1"
 $logPath = Join-Path $serverRoot "logs\web.log"
 
 if (-not (Test-Path $configPath)) {
   throw "Missing production configuration: $configPath"
 }
+if (-not (Test-Path $runtimePath)) { throw "Missing pinned runtime configuration: $runtimePath" }
 
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath) | Out-Null
 . $configPath
+. $runtimePath
+if (-not (Test-Path $env:TRADING_TOOLS_NODE) -or -not (Test-Path $env:TRADING_TOOLS_NPM)) {
+  throw "Pinned Node/npm runtime is unavailable."
+}
+$env:PATH = "$(Split-Path $env:TRADING_TOOLS_NODE);$env:PATH"
 $env:TRADING_TOOLS_PUBLIC_MODE = "1"
 $env:NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE = "1"
 Set-Location $repositoryRoot
@@ -19,5 +26,5 @@ if ((Test-Path $logPath) -and (Get-Item $logPath).Length -gt 10MB) {
   Move-Item $logPath "$logPath.1" -Force
 }
 "[$(Get-Date -Format o)] Starting Trading Tools" | Out-File -FilePath $logPath -Append
-& npm.cmd start -- --hostname 127.0.0.1 --port $env:PORT *>> $logPath
+& $env:TRADING_TOOLS_NPM start -- --hostname 127.0.0.1 --port $env:PORT *>> $logPath
 exit $LASTEXITCODE

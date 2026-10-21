@@ -40,7 +40,8 @@ if ($webListeners.Count -eq 0) { throw "No web listener exists on port 3000." }
 $nonLoopback = @($webListeners | Where-Object { $_.LocalAddress -notin @("127.0.0.1", "::1") })
 if ($nonLoopback.Count -gt 0) { throw "Port 3000 is listening outside loopback; refusing deployment." }
 
-if (-not (Select-String -Path "C:\TradingTools\logs\service-runtime-check.log" -Pattern "Service account can write and read" -Quiet)) {
+if (-not (Select-String -Path "C:\TradingTools\logs\service-runtime-check.log" -Pattern "^VerificationId=[0-9a-f]{32}$" -Quiet) -or
+    -not (Select-String -Path "C:\TradingTools\logs\service-runtime-check.log" -Pattern "Service account can write and read" -Quiet)) {
   throw "The service-account SQLite/data-directory verification record is missing."
 }
 

@@ -39,9 +39,12 @@ $tasks = @(
 try {
   $verificationTask = "TradingToolsVerifyRuntime"
   $verificationScript = "C:\TradingTools\app\deploy\windows\verify-service-runtime.ps1"
+  $verificationLog = "C:\TradingTools\logs\service-runtime-check.log"
+  $verificationId = [Guid]::NewGuid().ToString("N")
+  Remove-Item $verificationLog -Force -ErrorAction SilentlyContinue
   $verificationAction = New-ScheduledTaskAction `
     -Execute "PowerShell.exe" `
-    -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$verificationScript`""
+    -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$verificationScript`" -VerificationId $verificationId"
   Register-ScheduledTask `
     -TaskName $verificationTask `
     -Action $verificationAction `
@@ -50,16 +53,29 @@ try {
     -RunLevel Limited `
     -Settings $settings `
     -Force | Out-Null
+  $verificationRequestedAt = Get-Date
   Start-ScheduledTask -TaskName $verificationTask
+  $verificationCompleted = $false
   for ($attempt = 0; $attempt -lt 60; $attempt += 1) {
     $verificationState = Get-ScheduledTask -TaskName $verificationTask
     $verificationInfo = Get-ScheduledTaskInfo -TaskName $verificationTask
-    if ($verificationInfo.LastRunTime -gt [DateTime]::MinValue -and $verificationState.State -ne "Running") { break }
+    if ($verificationInfo.LastRunTime -ge $verificationRequestedAt.AddSeconds(-2) -and $verificationState.State -notin @("Running", "Queued")) {
+      $verificationCompleted = $true
+      break
+    }
     Start-Sleep -Seconds 1
   }
+  $verificationState = Get-ScheduledTask -TaskName $verificationTask
   $verificationInfo = Get-ScheduledTaskInfo -TaskName $verificationTask
+  $verificationResultHex = "0x{0:X8}" -f [uint32]$verificationInfo.LastTaskResult
+  if (-not $verificationCompleted) {
+    throw "The limited-account verification task did not start and finish within 60 seconds (state $($verificationState.State), result $verificationResultHex). Confirm that local or domain policy does not deny this account batch logon. Funnel remains disabled."
+  }
   if ($verificationInfo.LastTaskResult -ne 0) {
-    throw "Low-privilege SQLite/data-directory verification failed with result $($verificationInfo.LastTaskResult). See C:\TradingTools\logs\service-runtime-check.log."
+    throw "The limited-account runtime check failed with result $verificationResultHex. See C:\TradingTools\logs\service-runtime-check.log. Funnel remains disabled."
+  }
+  if (-not (Test-Path $verificationLog) -or -not (Select-String -Path $verificationLog -Pattern "^VerificationId=$verificationId$" -Quiet)) {
+    throw "The limited-account runtime check did not produce its unique success record. Funnel remains disabled."
   }
 
   foreach ($task in $tasks) {
