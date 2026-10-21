@@ -1081,3 +1081,32 @@ Implementation:
 - Refuse publication unless the dedicated account remains non-administrative, both limited tasks are running under its SID, the current service-account SQLite/data check exists, application health is ready, and port 3000 remains loopback-only.
 - Continue exposing only `http://127.0.0.1:3000` through Tailscale HTTPS on an explicitly allowed Funnel port; no Windows inbound firewall port is opened and OpenD remains unreachable from Funnel.
 - Require a successful Funnel status read after configuration and retain the documented one-command disable operation.
+
+### 2026-10-21 — Restore accumulated private capital-flow history securely
+
+User request:
+
+- Restore the missing long/short capital-flow history on the public VPS and enforce durable SQLite accumulation without publishing the private database.
+
+Diagnosis:
+
+- The preserved workstation `market.sqlite` contains 211 CITIC long rows from 2025-12-09 through 2026-10-20 and 112 short rows from 2026-05-11 through 2026-10-20, with a passing SQLite integrity check.
+- The fresh VPS `market.sqlite` contains only 19 long and 19 short rows from 2026-09-22 through 2026-10-20 because each CITIC endpoint returns a rolling one-month window. Repeated fetching cannot reconstruct dates that have already left that provider window.
+- The current worker already performs correct five-minute upserts and never deletes old dates; the missing step is a private one-time historical seed into that same database, not a competing second source of truth.
+
+Implementation:
+
+- Added a money-flow-only SQLite seed importer that rejects corrupt databases, duplicate/invalid dates, invalid numeric values, and non-CITIC source URLs.
+- Require the seed to be transferred into an Administrators/SYSTEM-only import directory, create an online pre-import backup under an equally restricted VPS directory, then merge missing long/short dates atomically with existing VPS rows taking precedence on overlaps.
+- Record the seed SHA-256, import time, row counts, and date coverage inside `money_flow_imports` for auditability and idempotence.
+- Verify SQLite integrity after import, confirm the running loopback APIs expose every stored row, and rerun the complete service-account, task, health, and loopback security gate.
+- Persist the verified long/short minimum row counts and date coverage outside the source tree; make all later deployment and Funnel verification fail closed if the running APIs fall below that baseline.
+- Keep `C:\TradingTools\data\market.sqlite` as the sole source of truth and preserve the existing worker's five-minute provider upserts so future rolling windows accumulate instead of replacing history.
+- Added deterministic Windows-compatible tests for merge precedence, idempotence, audit records, backups, and final database integrity.
+
+Verification:
+
+- Generated a private 88 KB money-flow-only seed with SHA-256 `0935e5bef5ea5a09a5affc7c66b456fc54189071351c380745f927b804139bd3`; its integrity check passed with 211 long rows (`2025-12-09`–`2026-10-20`) and 112 short rows (`2026-05-11`–`2026-10-20`).
+- Imported that real seed into an isolated Node `22.23.0` target and verified the same counts/ranges, a passing post-import integrity check, one 64-character audit hash, an online backup, and an enforced history-baseline file.
+- Ran the deterministic importer twice under Node `22.23.0`; merge precedence, idempotence, unique backups, audit records, baseline output, and SQLite integrity all passed.
+- `npm run audit:market-data` passed with 0 errors. Its 5 warnings were pre-existing stale workstation Futu/backtest caches and did not concern the current CITIC money-flow history, which the audit reported as 211 long and 112 short rows through `2026-10-20`.

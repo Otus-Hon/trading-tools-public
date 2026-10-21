@@ -60,6 +60,16 @@ Get-ScheduledTask -TaskName "TradingTools*" | Select-Object TaskName,State
 & C:\TradingTools\python\.venv\Scripts\python.exe C:\TradingTools\app\verify_futu_opend.py
 ```
 
+## Restore accumulated private money-flow history
+
+The CITIC endpoints publish a rolling recent window. A new VPS database therefore begins with only that window and cannot reconstruct older observations from the current provider response. Keep historical data out of Git: export a money-flow-only SQLite seed from the private workstation database, transfer it directly to `C:\TradingTools\imports` on the VPS, and run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\TradingTools\app\deploy\windows\import-money-flow.ps1 -SeedPath C:\TradingTools\imports\TradingTools-money-flow-seed.sqlite
+```
+
+The importer restricts the import and backup directories to Administrators and SYSTEM; validates SQLite integrity, dates, values, and CITIC source identity; creates an online backup; inserts only dates absent from the VPS; records the seed SHA-256 and coverage; checks the running APIs expose every row; and reruns the complete deployment/security gate. It also writes a private history baseline beside `market.sqlite`; every later deployment and Funnel publication fails closed if either API ever falls below that preserved row/date coverage. Existing VPS rows win on overlapping dates. The public worker continues five-minute provider upserts into the same `C:\TradingTools\data\market.sqlite` source of truth.
+
 Do not add inbound Windows Firewall rules for 3000 or 11111. Confirm `Get-NetTCPConnection -State Listen` shows both bound to loopback.
 
 ## Publish with Tailscale Funnel

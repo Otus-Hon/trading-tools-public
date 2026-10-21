@@ -35,6 +35,24 @@ if (-not $health -or $health.ok -ne $true) {
   throw "Local health did not become ready. Funnel remains disabled. Inspect C:\TradingTools\logs\web.log and worker.log."
 }
 
+$historyFloorPath = "C:\TradingTools\data\money-flow-history-floor.json"
+if (Test-Path $historyFloorPath) {
+  $historyFloor = Get-Content -Raw $historyFloorPath | ConvertFrom-Json
+  $longFlow = Invoke-RestMethod http://127.0.0.1:3000/api/moneyflow/long -TimeoutSec 20
+  $shortFlow = Invoke-RestMethod http://127.0.0.1:3000/api/moneyflow/short -TimeoutSec 20
+  foreach ($entry in @(
+    @{ Name = "long"; Api = $longFlow; Floor = $historyFloor.long },
+    @{ Name = "short"; Api = $shortFlow; Floor = $historyFloor.short }
+  )) {
+    $rows = @($entry.Api.rows)
+    if ($entry.Api.ok -ne $true -or $entry.Api.storage -ne "market.sqlite" -or
+        $entry.Api.row_count -lt $entry.Floor.minimum_rows -or $rows.Count -lt $entry.Floor.minimum_rows -or
+        $rows[0].date -gt $entry.Floor.min_date -or $rows[-1].date -lt $entry.Floor.max_date) {
+      throw "The $($entry.Name) money-flow history fell below its preserved SQLite baseline; refusing deployment/publication."
+    }
+  }
+}
+
 $webListeners = @(Get-NetTCPConnection -State Listen -LocalPort 3000 -ErrorAction SilentlyContinue)
 if ($webListeners.Count -eq 0) { throw "No web listener exists on port 3000." }
 $nonLoopback = @($webListeners | Where-Object { $_.LocalAddress -notin @("127.0.0.1", "::1") })
