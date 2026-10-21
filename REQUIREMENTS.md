@@ -938,3 +938,33 @@ Verification:
 - The market-data audit passed with zero errors: 227 official HKEX rows through 2026-10-20, 211 long-flow rows, 112 short-flow rows, and a complete 2,912-product/1,094-level Futu CBBC snapshot. Five expected warnings remained for the locally stale Futu cache and four backtest timeframes while OpenD was offline.
 - Observed the rendered production Main Data page complete a five-second refresh: the Refresh button returned from `REFRESHING…` to `REFRESH ALL DATA`, chart/panel geometry stayed mounted, and the browser console had zero warnings or errors.
 - No Windows VPS, Tailscale Funnel, firewall, OpenD, database, or credential change was executed from this development machine.
+
+### 2026-10-21 — Repair Windows native modules, security tests, and service setup
+
+User request:
+
+- Diagnose and fix the Windows VPS failures involving `better-sqlite3`, the public-security test, locked Next.js SWC files, and the service-account `SecureString` handoff.
+- Preserve existing databases, OpenD, configuration, and application data; keep the site private until SQLite, security, startup, and low-privilege account checks pass; commit and push the repair.
+
+Diagnosis:
+
+- The installer ran `npm ci` while the existing web/worker Node processes could still hold SWC and SQLite native modules open. Windows therefore returned `EPERM`, and the stale SQLite binary remained incompatible with Node ABI 127.
+- The SQLite repair re-probed the native module in the same Node process that had already failed to load it, so a successful rebuild was not independently verified.
+- The security test spawned the `npm.cmd` command shim directly. Current Windows Node process spawning rejects that batch-command path with `EINVAL` unless a shell is introduced.
+- `deploy.ps1` passed a `SecureString` through a new `powershell.exe -File` process. PowerShell serialized it as the text `System.Security.SecureString`, which cannot bind back to a secure-string parameter.
+
+Implementation:
+
+- Stop only Trading Tools scheduled tasks and app-scoped `node.exe` processes before modifying dependencies; wait for native-module handles to close while leaving OpenD, Tailscale, data, configuration, and unrelated applications untouched.
+- Re-probe `better-sqlite3` in a fresh Node subprocess before and after repair, run a real query, and repeat the check after production pruning. Exact already-verified releases skip unnecessary npm/Python installation and rebuilding.
+- Launch the public-security Next server directly through `node.exe` and Next's JavaScript entry point, with bounded cross-platform shutdown and cleanup.
+- Keep the service password as a `SecureString` in one PowerShell runspace, use plaintext only transiently inside the Task Scheduler API call, never log or persist it, and reject administrator/SYSTEM principals.
+- Added a one-time limited scheduled-task check proving the service identity can load SQLite and write/read the private data directory. Final verification also requires both limited tasks running, ready health, and a loopback-only listener; any failure leaves Funnel disabled.
+- Added a Windows Server 2022 GitHub Actions gate for the pinned Node ABI, a real SQLite read/write, production build, public-security suite, PowerShell parsing, secure-string account creation, and non-administrator membership.
+
+Verification:
+
+- Under pinned Node 22.23.0 / ABI 127, `better-sqlite3` loaded in fresh processes, completed in-memory and private-directory write/read queries, and removed its temporary verification database.
+- The public production build and complete public-security integration suite passed; production dependency audit reported zero vulnerabilities.
+- Auto-strategy tests, four expiry tests, eight backtest-engine tests, and three Python strategy-configuration tests passed.
+- The real-data audit passed with zero errors: 227 official HKEX rows through 2026-10-20, 211 long-flow rows, 112 short-flow rows, and a complete 2,912-product/1,094-level Futu CBBC snapshot. Five expected warnings remained for the offline/stale local OpenD cache and four backtest timeframes.

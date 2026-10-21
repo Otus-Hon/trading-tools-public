@@ -127,6 +127,8 @@ The supported VPS layout and PowerShell installer are documented in [`deploy/win
 
 Public deployments use two low-privilege processes: a loopback-only Next.js read server and a separate provider-refresh worker. Public HTTP requests cannot launch Python/Futu work or mutate shared data. The endpoint inventory, trust boundaries, confirmed remediations, and remaining risks are documented in [`SECURITY.md`](SECURITY.md).
 
+The Windows deployment gate stops only Trading Tools processes before native dependency work, verifies SQLite in a fresh Node process, runs the public-security integration suite on Windows, and proves the limited service identity can use the private data directory before accepting startup. It never publishes Funnel automatically.
+
 ## Production notes
 - `npm run dev`, `npm run dev:web`, `npm run build`, and `npm start` all run the SQLite ABI preflight before using the application.
 - Runtime SQLite files are created inside the private data directory. Populate them through the refresh endpoints or fetch scripts after deployment.

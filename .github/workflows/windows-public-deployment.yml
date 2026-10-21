@@ -1,0 +1,55 @@
+name: Windows public deployment checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      TRADING_TOOLS_PUBLIC_MODE: "1"
+      NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE: "1"
+      FUTU_HOST: "127.0.0.1"
+      FUTU_PORT: "11111"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify SQLite ABI and connection
+        shell: powershell
+        run: |
+          npm run ensure:sqlite
+          $env:TRADING_TOOLS_DATA_DIR = Join-Path $env:RUNNER_TEMP "trading-tools-data"
+          node .\scripts\verify_runtime_access.js
+      - name: Build public release
+        run: npm run build
+      - name: Run public-security integration tests
+        run: npm run test:public-security
+      - name: Parse deployment scripts and verify SecureString handoff
+        shell: powershell
+        run: |
+          Get-ChildItem .\deploy\windows\*.ps1 | ForEach-Object {
+            [void][ScriptBlock]::Create((Get-Content $_.FullName -Raw))
+          }
+          $testUser = "TTCI$($env:GITHUB_RUN_ATTEMPT)$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+          $password = ConvertTo-SecureString ([Guid]::NewGuid().ToString() + "aA1!") -AsPlainText -Force
+          try {
+            & .\deploy\windows\setup-service-account.ps1 -UserName $testUser -Password $password
+            $member = Get-LocalGroupMember -Group (Get-LocalGroup -SID "S-1-5-32-544") -ErrorAction SilentlyContinue |
+              Where-Object { $_.SID.Value -eq (Get-LocalUser -Name $testUser).SID.Value }
+            if ($member) { throw "Test service account unexpectedly has administrator membership." }
+          } finally {
+            Remove-LocalUser -Name $testUser -ErrorAction SilentlyContinue
+            $password = $null
+          }

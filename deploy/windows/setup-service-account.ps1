@@ -20,6 +20,12 @@ if ($existing) {
 }
 
 $account = "$env:COMPUTERNAME\$UserName"
+$administrators = Get-LocalGroup -SID "S-1-5-32-544"
+$isAdministrator = Get-LocalGroupMember -Group $administrators -ErrorAction SilentlyContinue | Where-Object {
+  $_.SID -and $_.SID.Value -eq (Get-LocalUser -Name $UserName).SID.Value
+}
+if ($isAdministrator) { throw "$account must not be a member of the local Administrators group." }
+
 foreach ($target in @("C:\TradingTools\app", "C:\TradingTools\config", "C:\TradingTools\python")) {
   if (Test-Path $target) { & icacls.exe $target /grant "${account}:(OI)(CI)RX" /T /C | Out-Null }
 }

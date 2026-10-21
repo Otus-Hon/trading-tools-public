@@ -9,8 +9,8 @@ const { spawn } = require("node:child_process");
 const port = 4317;
 const origin = `http://127.0.0.1:${port}`;
 const tempData = fs.mkdtempSync(path.join(os.tmpdir(), "trading-tools-public-test-"));
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const child = spawn(npm, ["start", "--", "--hostname", "127.0.0.1", "--port", String(port)], {
+const nextBin = require.resolve("next/dist/bin/next");
+const child = spawn(process.execPath, [nextBin, "start", "--hostname", "127.0.0.1", "--port", String(port)], {
   cwd: process.cwd(),
   env: {
     ...process.env,
@@ -23,6 +23,7 @@ const child = spawn(npm, ["start", "--", "--hostname", "127.0.0.1", "--port", St
     FUTU_PYTHON: path.join(tempData, "must-not-run-python"),
   },
   stdio: ["ignore", "pipe", "pipe"],
+  windowsHide: true,
 });
 
 let output = "";
@@ -48,6 +49,22 @@ async function expectStatus(urlPath, expected, init) {
   const response = await request(urlPath, init);
   assert.equal(response.status, expected, `${urlPath} returned ${response.status}, expected ${expected}`);
   return response;
+}
+
+async function stopChild() {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  child.kill("SIGTERM");
+  await Promise.race([
+    new Promise((resolve) => child.once("exit", resolve)),
+    new Promise((resolve) => setTimeout(resolve, 5_000)),
+  ]);
+  if (child.exitCode === null && child.signalCode === null) {
+    child.kill("SIGKILL");
+    await Promise.race([
+      new Promise((resolve) => child.once("exit", resolve)),
+      new Promise((resolve) => setTimeout(resolve, 5_000)),
+    ]);
+  }
 }
 
 async function main() {
@@ -82,10 +99,14 @@ async function main() {
   console.log("public security integration tests passed");
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-}).finally(() => {
-  child.kill("SIGTERM");
-  fs.rmSync(tempData, { recursive: true, force: true });
-});
+(async () => {
+  try {
+    await main();
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
+  } finally {
+    await stopChild();
+    fs.rmSync(tempData, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
+})();

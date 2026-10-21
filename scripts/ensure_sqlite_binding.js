@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
 const repoRoot = path.join(__dirname, "..");
+const probeOnly = process.argv.includes("--probe-only");
 
 function probeBinding() {
   try {
@@ -13,11 +14,28 @@ function probeBinding() {
     database.close();
     return true;
   } catch (error) {
+    if (probeOnly) {
+      console.error(`[sqlite] probe failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
     return false;
   }
 }
 
-if (probeBinding()) {
+if (probeOnly) {
+  process.exit(probeBinding() ? 0 : 1);
+}
+
+function runFreshProbe() {
+  return spawnSync(process.execPath, [__filename, "--probe-only"], {
+    cwd: repoRoot,
+    env: process.env,
+    stdio: "inherit",
+    windowsHide: true,
+  });
+}
+
+const initialProbe = runFreshProbe();
+if (!initialProbe.error && initialProbe.status === 0) {
   console.log(`[sqlite] better-sqlite3 ready for Node ${process.version} (ABI ${process.versions.modules}).`);
   process.exit(0);
 }
@@ -35,10 +53,11 @@ if (!npmCli) {
 const rebuild = spawnSync(
   process.execPath,
   [npmCli, "rebuild", "better-sqlite3"],
-  { cwd: repoRoot, stdio: "inherit", env: process.env }
+  { cwd: repoRoot, stdio: "inherit", env: process.env, windowsHide: true }
 );
 
-if (rebuild.error || rebuild.status !== 0 || !probeBinding()) {
+const rebuiltProbe = rebuild.error || rebuild.status !== 0 ? null : runFreshProbe();
+if (rebuild.error || rebuild.status !== 0 || rebuiltProbe?.error || rebuiltProbe?.status !== 0) {
   console.error("[sqlite] Unable to prepare better-sqlite3 for the active Node runtime.");
   process.exit(rebuild.status || 1);
 }

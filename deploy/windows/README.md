@@ -36,6 +36,18 @@ powershell -ExecutionPolicy Bypass -File .\deploy\windows\deploy.ps1
 
 The account and task scripts prompt for the dedicated account password. The password is passed to Windows Task Scheduler and is not written to the repository or `production.ps1`. The web task listens on `127.0.0.1:3000`; the independent worker performs provider refreshes. Both run with limited privileges and restart after failures.
 
+The installer stops only the `TradingToolsWeb`/`TradingToolsWorker` tasks and app-scoped Node processes before changing native modules. It does not stop or reinstall OpenD, Tailscale, the existing Python environment when healthy, or unrelated applications. Runtime databases, configuration, and logs remain outside the checkout. An exact already-verified release skips npm installation and rebuilding.
+
+Before accepting a deployment, the scripts verify all of the following on Windows:
+
+- `better-sqlite3` loads in a fresh Node 22.23.0 process and completes a real query;
+- the public-security integration suite passes;
+- the dedicated service identity is not an administrator and both tasks have `Limited` run level;
+- that identity can load SQLite and write/read the private data directory;
+- both tasks start, the application reaches ready health, and port 3000 listens only on loopback.
+
+If any check fails, deployment stops and Funnel remains disabled.
+
 In Local Security Policy, deny `TradingToolsSvc` **Log on locally** and **Log on through Remote Desktop Services**. Do not add it to Administrators. Preserve **Log on as a batch job** so Task Scheduler can start it.
 
 ## Verify
@@ -73,6 +85,23 @@ powershell -ExecutionPolicy Bypass -File C:\TradingTools\app\deploy\windows\upda
 ```
 
 The updater uses `git pull --ff-only`, rebuilds, and restarts only `TradingToolsWeb` and `TradingToolsWorker`. It does not restart OpenD, Tailscale, or unrelated applications.
+
+## Repair or redeploy safely
+
+From Administrator PowerShell, this single command downloads the reviewed release and runs the complete private deployment gate:
+
+```powershell
+Set-Location C:\TradingTools\app; git pull --ff-only; if ($LASTEXITCODE -eq 0) { powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\windows\deploy.ps1 }
+```
+
+The password prompt is for the dedicated `TradingToolsSvc` account. Input is a `SecureString`; the password is not placed in a process command line, configuration file, log, or Git. Publication is still a separate explicit action.
+
+### Windows failure causes addressed
+
+- Native `.node` files cannot be replaced while the existing Next.js/worker processes hold them open. The installer now stops only app-scoped processes before `npm ci`, eliminating the SWC `EPERM` and stale SQLite binary.
+- SQLite is rechecked in a fresh Node process after rebuild, so a prior failed native-module load cannot contaminate verification in the repair process.
+- The security test launches Next directly with `node.exe`; it no longer asks Node to spawn the Windows `npm.cmd` shim, which caused `spawn EINVAL`.
+- `SecureString` values stay in one PowerShell runspace. Passing one through `powershell.exe -File` converted it to the literal string `System.Security.SecureString`.
 
 ## Add another application later
 

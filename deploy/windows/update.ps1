@@ -8,5 +8,4 @@ if ($LASTEXITCODE -ne 0) { throw "Build failed; scheduled tasks were not restart
 
 Restart-ScheduledTask -TaskName TradingToolsWorker
 Restart-ScheduledTask -TaskName TradingToolsWeb
-Start-Sleep -Seconds 8
-Invoke-RestMethod http://127.0.0.1:3000/api/health -TimeoutSec 10
+& .\deploy\windows\verify-deployment.ps1
