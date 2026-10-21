@@ -18,6 +18,7 @@ const { isStale, lastClosedHkSessionDate, refreshTimeframeSingleFlight, runBridg
   runBridge: (start: string, end: string, timeframe: string) => Promise<{ ok?: boolean; bars?: unknown[]; error?: string; hint?: string }>;
 };
 const { dataPath } = dataPathsModule as unknown as { dataPath: (...segments: string[]) => string };
+const { isPublicMode } = require("../../../../lib/publicMode.js") as { isPublicMode: () => boolean };
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   const end = request.nextUrl.searchParams.get("end") ?? new Date().toISOString().slice(0, 10);
   const days = Math.min(365, Math.max(7, Number(request.nextUrl.searchParams.get("days") ?? 180)));
   const timeframe = request.nextUrl.searchParams.get("timeframe") ?? "15m";
-  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+  const forceRefresh = !isPublicMode() && request.nextUrl.searchParams.get("refresh") === "1";
   if (!["1m", "15m", "4h", "1d"].includes(timeframe)) return NextResponse.json({ ok: false, error: "Invalid timeframe." }, { status: 400 });
   if (!validDate(end)) return NextResponse.json({ ok: false, error: "Invalid end date." }, { status: 400 });
   const endDate = new Date(`${end}T00:00:00Z`);

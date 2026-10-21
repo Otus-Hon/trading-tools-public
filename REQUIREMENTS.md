@@ -892,3 +892,21 @@ Verification:
 - Targeted ESLint, Auto strategy tests, four expiry tests, eight backtest-engine tests, three Python-configuration tests, and the production Next.js build passed under Node 22.23.0.
 - The market-data audit passed with zero errors. Five expected warnings remain because local OpenD was not running: one stale Futu live cache and four backtest timeframes behind the last closed session.
 - Created a one-commit, history-free public snapshot containing 98 source/configuration files and no runtime database, generated image, private environment file, oversized artifact, credential pattern, or user-specific absolute path.
+
+### 2026-10-21 — Add a safe public-viewing mode
+
+User request:
+
+- Put the website on the internet so anyone can view it without exposing Futu OpenD or unsafe server capabilities.
+
+Implementation:
+
+- Added an explicit public mode for the Windows deployment. It keeps OpenD on localhost and keeps the generated SQLite/cache directory outside the public repository.
+- Public mode disables visitor-submitted Python strategy execution, manual backtest refreshes, on-demand Futu candle extraction, forced provider-refresh query parameters, startup mutation checks, and shared market-order writes.
+- The public UI exposes Auto strategies as a stored-data view but removes the Python strategy tab and manual server-refresh button. Automatic verified-data reads and the existing controlled provider cadences remain intact.
+
+Verification:
+
+- The public-mode production build passed under Node 22.23.0, and the market-data audit passed with zero errors and the five previously disclosed stale-OpenD/backtest warnings.
+- The production `/market-data` page returned HTTP 200. Public requests to Python execution, manual backtest refresh, and shared market-order writes each returned HTTP 403.
+- In a headless browser after an eight-second render, Backtest showed only the Auto strategies view with stored results; the Python strategy tab was absent and the existing charts remained usable.

@@ -5,6 +5,7 @@ import AutoStrategyPanel from "../components/AutoStrategyPanel";
 import MacdBacktest from "../components/MacdBacktest";
 
 export default function BacktestPage() {
+  const publicMode = process.env.NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE === "1";
   const [view, setView] = useState<"auto" | "python">("auto");
 
   return (
@@ -17,16 +18,18 @@ export default function BacktestPage() {
         >
           Auto strategies
         </button>
-        <button
-          type="button"
-          onClick={() => setView("python")}
-          className={`rounded-md px-3 py-1.5 text-xs font-semibold ${view === "python" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"}`}
-        >
-          Python strategy
-        </button>
+        {!publicMode && (
+          <button
+            type="button"
+            onClick={() => setView("python")}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${view === "python" ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"}`}
+          >
+            Python strategy
+          </button>
+        )}
       </div>
       <div className="min-h-0 flex-1">
-        {view === "auto" ? <AutoStrategyPanel /> : <MacdBacktest />}
+        {publicMode || view === "auto" ? <AutoStrategyPanel /> : <MacdBacktest />}
       </div>
     </main>
   );

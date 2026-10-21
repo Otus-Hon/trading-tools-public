@@ -237,6 +237,7 @@ function hasHkCashMarketOpened(feedTime: ReturnType<typeof parseHkFeedTime>): bo
 }
 
 export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main" }: HsiPanelProps) {
+  const publicMode = process.env.NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE === "1";
   const useFutuData = dataMode === "futu";
   const [cbbcView, setCbbcView] = useState<CbbcPresentation>("general");
   const useDetailCbbc = useFutuData && cbbcView === "detail";
@@ -1752,7 +1753,7 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
 
   const actionControls = (
     <>
-      <button
+      {!publicMode && <button
         type="button"
         onClick={() => {
           if (refreshAllInFlightRef.current) return;
@@ -1767,7 +1768,7 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
       >
         <span className={manualRefreshActive ? "animate-spin" : ""}>↻</span>
         {manualRefreshActive ? "REFRESHING…" : "REFRESH ALL DATA"}
-      </button>
+      </button>}
       <button
         onClick={() => setAlertsMuted((m) => !m)}
         title={alertsMuted ? "Knockout alerts muted — click to unmute" : "Knockout alerts on — click to mute"}

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import marketDbModule from "../../../../lib/marketDb.js";
 import dataPathsModule from "../../../../lib/dataPaths.js";
 import pythonPathModule from "../../../../lib/pythonPath.js";
+import publicModeModule from "../../../../lib/publicMode.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ let fullRefreshInFlight: Promise<Payload> | null = null;
 let cbbcRefreshInFlight: Promise<Payload> | null = null;
 const { dataPath } = dataPathsModule as unknown as { dataPath: (...segments: string[]) => string };
 const { pythonPath } = pythonPathModule as unknown as { pythonPath: () => string };
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 const FULL_CACHE_PATH = dataPath("futu_market_data_cache.json");
 const EXPIRY_SELECTION_POLICY = "front_calendar_month_until_expiry_date_end_hkt";
 
@@ -165,7 +167,7 @@ function ensureCbbcRefresh(now: number): Promise<Payload> | null {
 
 export async function GET(request: NextRequest) {
   const liveOnly = request.nextUrl.searchParams.get("live") === "1";
-  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+  const forceRefresh = !isPublicMode() && request.nextUrl.searchParams.get("refresh") === "1";
   const now = Date.now();
   const cbbcRefresh = ensureCbbcRefresh(now);
   if (!cbbcCache && cbbcRefresh) await cbbcRefresh;

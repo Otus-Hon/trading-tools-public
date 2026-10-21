@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import pythonPathModule from "../../../../lib/pythonPath.js";
+import publicModeModule from "../../../../lib/publicMode.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ function isValidIsoDate(value: string) {
 }
 
 const { pythonPath } = pythonPathModule as unknown as { pythonPath: () => string };
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 
 function runBridge(date: string): Promise<BridgePayload> {
   return new Promise((resolve, reject) => {
@@ -63,6 +65,9 @@ function runBridge(date: string): Promise<BridgePayload> {
 }
 
 export async function GET(request: NextRequest) {
+  if (isPublicMode()) {
+    return NextResponse.json({ ok: false, error: "On-demand candle extraction is disabled on the public website." }, { status: 403 });
+  }
   const date = request.nextUrl.searchParams.get("date") || defaultBacktestDate();
   if (!isValidIsoDate(date)) {
     return NextResponse.json(

@@ -117,6 +117,8 @@ Set `TRADING_TOOLS_DATA_DIR` to use a private data directory outside the checkou
 - `MARKET_DB_PATH` and `BACKTEST_DB_PATH`: optional explicit SQLite overrides.
 - `FUTU_PYTHON`: Python executable containing the official `futu-api` package. Windows virtual environments use `.venv-futu\\Scripts\\python.exe`; Unix environments use `.venv-futu/bin/python`.
 - `FUTU_HOST` and `FUTU_PORT`: OpenD socket address. Defaults to `127.0.0.1:11111`; never expose this socket publicly.
+- `TRADING_TOOLS_PUBLIC_MODE=1`: disables visitor-triggered Python execution and shared-data mutation endpoints.
+- `NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE=1`: builds the public UI without Python execution and manual server-refresh controls.
 - HSI range: `/api/hsi?years=<int>` (default 5).
 
 ## Windows Server deployment

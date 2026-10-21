@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import marketDbModule from "../../../../lib/marketDb.js";
 import dataPathsModule from "../../../../lib/dataPaths.js";
+import publicModeModule from "../../../../lib/publicMode.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ type Row = {
 };
 
 const { dataPath } = dataPathsModule as unknown as { dataPath: (...segments: string[]) => string };
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 const CACHE_PATH = dataPath("hkex_hsi_open_interest.json");
 const FUTU_CACHE_PATH = dataPath("futu_open_interest.json");
 const LOOKBACK_DAYS = 240;
@@ -161,7 +163,7 @@ export async function GET(request: NextRequest) {
   const today = new Date().toISOString().slice(0, 10);
   const expectedLatest = latestExpectedReportDate();
   const isFresh = Boolean(latest && latest >= expectedLatest);
-  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+  const forceRefresh = !isPublicMode() && request.nextUrl.searchParams.get("refresh") === "1";
 
   if (forceRefresh || !isFresh || stored.rows.length < 60) {
     if (!historyRefreshInFlight) {

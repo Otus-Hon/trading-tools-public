@@ -11,6 +11,7 @@ const { sessionDate } = require("../../../../lib/autoStrategies.js") as {
   sessionDate: (bar: { timeKey?: string }) => string;
 };
 const { pythonPath } = require("../../../../lib/pythonPath.js") as { pythonPath: () => string };
+const { isPublicMode } = require("../../../../lib/publicMode.js") as { isPublicMode: () => boolean };
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +62,9 @@ function runPython(payload: unknown) {
 }
 
 export async function POST(request: NextRequest) {
+  if (isPublicMode()) {
+    return NextResponse.json({ ok: false, error: "Python strategy execution is disabled on the public website." }, { status: 403 });
+  }
   try {
     const body = await request.json() as { code?: unknown; usdHkd?: unknown };
     if (typeof body.code !== "string") {

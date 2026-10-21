@@ -5,12 +5,16 @@ const { TIMEFRAMES, refreshBacktestHistories } = require("../../../../lib/backte
   TIMEFRAMES: string[];
   refreshBacktestHistories: (timeframes?: string[], force?: boolean) => Promise<Record<string, unknown>>;
 };
+const { isPublicMode } = require("../../../../lib/publicMode.js") as { isPublicMode: () => boolean };
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
+  if (isPublicMode()) {
+    return NextResponse.json({ ok: false, error: "Manual backtest refresh is disabled on the public website." }, { status: 403 });
+  }
   try {
     const body = await request.json().catch(() => ({})) as { timeframe?: unknown; timeframes?: unknown; force?: unknown };
     const requested = Array.isArray(body.timeframes)

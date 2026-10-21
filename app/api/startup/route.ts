@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import publicModeModule from "../../../lib/publicMode.js";
 
 export const runtime = "nodejs";
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 
 type JsonObject = Record<string, any>;
 
@@ -187,6 +189,9 @@ function validateHsi(history: EndpointResult, live: EndpointResult, warnings: st
 }
 
 export async function POST(request: Request) {
+  if (isPublicMode()) {
+    return NextResponse.json({ ok: false, error: "Startup mutation checks are disabled on the public website." }, { status: 403 });
+  }
   const origin = new URL(request.url).origin;
   const warnings: string[] = [];
   const errors: string[] = [];
