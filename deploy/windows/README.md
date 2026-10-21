@@ -96,6 +96,14 @@ Set-Location C:\TradingTools\app; git pull --ff-only; if ($LASTEXITCODE -eq 0) {
 
 The password prompt is for the dedicated `TradingToolsSvc` account. Input is a `SecureString`; the password is not placed in a process command line, configuration file, log, or Git. Publication is still a separate explicit action.
 
+If installation completed through the final SQLite check but account setup rejected the password, pull the latest scripts and resume without reinstalling or rebuilding:
+
+```powershell
+Set-Location C:\TradingTools\app; git pull --ff-only; if ($LASTEXITCODE -eq 0) { powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\windows\deploy.ps1 -Resume }
+```
+
+Resume is accepted only when the completed build stamp and dependency lock match, no application build input changed, the production build exists, and SQLite still loads. A deployment-script/documentation-only update is allowed. Windows password-policy rejection permits up to three hidden retries and never weakens the server policy.
+
 ### Windows failure causes addressed
 
 - Native `.node` files cannot be replaced while the existing Next.js/worker processes hold them open. The installer now stops only app-scoped processes before `npm ci`, eliminating the SWC `EPERM` and stale SQLite binary.

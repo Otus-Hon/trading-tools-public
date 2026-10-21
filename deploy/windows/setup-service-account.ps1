@@ -8,6 +8,7 @@ if (-not $Password) { $Password = Read-Host "Password for the dedicated $UserNam
 
 $existing = Get-LocalUser -Name $UserName -ErrorAction SilentlyContinue
 if ($existing) {
+  Write-Host "Existing dedicated account found; updating its password and restrictions."
   Set-LocalUser -Name $UserName -Password $Password -PasswordNeverExpires $true -UserMayChangePassword $false
 } else {
   New-LocalUser `
@@ -17,6 +18,7 @@ if ($existing) {
     -PasswordNeverExpires `
     -UserMayNotChangePassword `
     -Description "Limited Trading Tools web/worker account" | Out-Null
+  Write-Host "Created the dedicated service account."
 }
 
 $account = "$env:COMPUTERNAME\$UserName"

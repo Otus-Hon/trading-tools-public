@@ -987,3 +987,17 @@ Implementation:
 - Made Windows installation explicitly run `npm ci --include=dev` for the build phase while keeping `NODE_ENV=production`, then retain the existing post-verification `npm prune --omit=dev` security step.
 - Changed the Windows Server 2022 CI job to reproduce the production environment and assert that Tailwind/PostCSS and TypeScript are installed before building.
 - Preserved all runtime databases, configuration, OpenD, Python packages, tasks, and logs; the failed deployment never reached service-account or publication steps.
+
+### 2026-10-21 — Resume after a Windows password-policy rejection
+
+User request:
+
+- Determine whether the failed `New-LocalUser` attempt partially created `TradingToolsSvc`, resume after the already successful build without reinstalling, retry policy-compliant passwords safely, and explain the differing npm audit results.
+
+Implementation:
+
+- Added a guarded `deploy.ps1 -Resume` path. It skips installation/build only after verifying the completed release stamp, unchanged package lock, an existing production build, no application-source changes since that build, and a fresh SQLite native-binding probe.
+- Kept account creation idempotent: an absent account is created and an existing dedicated account is updated; no unrelated account or Windows password policy is changed.
+- Added up to three hidden `SecureString` password attempts when Windows specifically returns `InvalidPassword`. Rejected values are discarded without logging, persistence, or process-command-line exposure; other account errors still stop immediately.
+- Preserved the separate final gates for a non-admin limited principal, service-account SQLite/data-directory access, scheduled-task identity, application health, and loopback-only listening. Funnel remains a separate explicit action.
+- Confirmed the apparent npm discrepancy is intentional: the initial five advisories are confined to the build-only development graph, while `npm audit --omit=dev` validates the production graph at zero vulnerabilities and `npm prune --omit=dev` removes build-only packages before runtime.
