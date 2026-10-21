@@ -55,6 +55,7 @@ jobs:
           }
           $testUser = "TTCI$($env:GITHUB_RUN_ATTEMPT)$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
           $credentialPath = "C:\TradingTools\config\$testUser.credential.xml"
+          $testTask = "TradingToolsIdentityCI$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
           try {
             $credential = & .\deploy\windows\get-service-credential.ps1 `
               -ServiceUser $testUser `
@@ -72,9 +73,24 @@ jobs:
               $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value -eq $testSid
             }
             if ($credentialAccess) { throw "Service account can read its protected credential file." }
+            $taskUser = (Get-LocalUser -Name $testUser).SID.Translate([Security.Principal.NTAccount]).Value
+            $taskPassword = $reloaded.GetNetworkCredential().Password
+            $taskAction = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c exit 0"
+            Register-ScheduledTask `
+              -TaskName $testTask `
+              -Action $taskAction `
+              -User $taskUser `
+              -Password $taskPassword `
+              -RunLevel Limited `
+              -Force | Out-Null
+            $registeredTask = Get-ScheduledTask -TaskName $testTask
+            $registeredSid = ([Security.Principal.NTAccount]$registeredTask.Principal.UserId).Translate([Security.Principal.SecurityIdentifier]).Value
+            if ($registeredSid -ne $testSid) { throw "Scheduled Task principal does not match the local service account." }
           } finally {
+            Unregister-ScheduledTask -TaskName $testTask -Confirm:$false -ErrorAction SilentlyContinue
             Remove-LocalUser -Name $testUser -ErrorAction SilentlyContinue
             Remove-Item $credentialPath -Force -ErrorAction SilentlyContinue
+            $taskPassword = $null
             $credential = $null
             $reloaded = $null
           }

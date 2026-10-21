@@ -13,6 +13,11 @@ if ([string]::IsNullOrWhiteSpace($plainPassword)) { throw "A service-account pas
 
 $localUserName = ($Credential.UserName -split "\\")[-1]
 $localUser = Get-LocalUser -Name $localUserName -ErrorAction Stop
+$taskUser = $localUser.SID.Translate([Security.Principal.NTAccount]).Value
+$taskUserSid = ([Security.Principal.NTAccount]$taskUser).Translate([Security.Principal.SecurityIdentifier]).Value
+if ($taskUserSid -ne $localUser.SID.Value) {
+  throw "Task Scheduler identity resolution did not return the dedicated local service account."
+}
 $administrators = Get-LocalGroup -SID "S-1-5-32-544"
 $isAdministrator = Get-LocalGroupMember -Group $administrators -ErrorAction SilentlyContinue | Where-Object {
   $_.SID -and $_.SID.Value -eq $localUser.SID.Value
@@ -40,7 +45,7 @@ try {
   Register-ScheduledTask `
     -TaskName $verificationTask `
     -Action $verificationAction `
-    -User $Credential.UserName `
+    -User $taskUser `
     -Password $plainPassword `
     -RunLevel Limited `
     -Settings $settings `
@@ -66,7 +71,7 @@ try {
       -TaskName $task.Name `
       -Action $action `
       -Trigger $trigger `
-      -User $Credential.UserName `
+      -User $taskUser `
       -Password $plainPassword `
       -RunLevel Limited `
       -Settings $settings `

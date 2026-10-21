@@ -1027,3 +1027,20 @@ Implementation:
 - Replaced the nonexistent `Remove-ScheduledTask` call with Windows' supported `Unregister-ScheduledTask` cmdlet.
 - Kept cleanup idempotent and non-interactive; rerunning safely replaces the temporary verification task and both application tasks using the already encrypted credential.
 - Expanded Windows Server CI to assert that every ScheduledTasks cmdlet used by deployment exists, preventing another parser-valid but unavailable command from reaching the VPS.
+
+### 2026-10-21 — Resolve the local account for Task Scheduler
+
+User request:
+
+- Continue the guarded Windows deployment after Task Scheduler rejected the existing `TradingToolsSvc` account with “No mapping between account names and security IDs was done.”
+
+Diagnosis:
+
+- The encrypted credential intentionally stores the local shorthand `.\\TradingToolsSvc`. PowerShell account cmdlets accept that shorthand, but the ScheduledTasks CIM provider on the VPS attempted to translate it literally and rejected its `UserId` even though the local account existed.
+
+Implementation:
+
+- Resolve the verified local user's SID back to its canonical machine-qualified NT account name and confirm it translates to the same SID before passing it to Task Scheduler.
+- Keep the password inside the existing DPAPI-backed credential flow; it is exposed only transiently to the in-process Task Scheduler API and is never printed or placed on a process command line.
+- Added a Windows Server CI integration check that creates a temporary limited Scheduled Task with a generated local account, verifies the registered principal SID, and removes both safely.
+- Preserve the completed build, application data, OpenD, configuration, encrypted credential, and existing service account. Funnel remains disabled until final runtime verification succeeds.
