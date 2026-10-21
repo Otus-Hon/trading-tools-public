@@ -1,13 +1,15 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { fetchHsiLive } from "@/lib/hsiLive";
+import publicModeModule from "../../../lib/publicMode.js";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const {
   upsertMarketQuotes,
   readMarketQuotes,
 } = require("@/lib/marketDb");
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 
 const CACHE_TTL_MS = 2_500;
 const FETCH_TIMEOUT_MS = 9_000;
@@ -32,8 +34,6 @@ type Quote = {
   change: number | null;
   changePercent: number | null;
 };
-
-let lastFetch = 0;
 
 async function fetchWithTimeout(url: string, init?: RequestInit) {
   const controller = new AbortController();
@@ -179,7 +179,6 @@ async function refreshQuotes(): Promise<{ updatedAt: string; quotes: Quote[] }> 
     upsertMarketQuotes(dbQuotes, "yahoo-v8");
   }
 
-  lastFetch = Date.now();
   return { updatedAt: new Date().toISOString(), quotes };
 }
 
@@ -194,6 +193,13 @@ export async function GET() {
     const cachedHasData = Array.isArray(cached?.quotes)
       ? cached.quotes.some((q: Quote) => q.price !== null)
       : false;
+
+    if (isPublicMode()) {
+      if (cachedHasData) {
+        return NextResponse.json({ updatedAt: cached.updatedAt, quotes: cached.quotes, cached: true }, { status: 200 });
+      }
+      return NextResponse.json({ error: "No stored market quotes are available yet." }, { status: 503 });
+    }
 
     const needsRefresh = !cachedHasData || cacheAge >= CACHE_TTL_MS;
 

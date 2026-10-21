@@ -35,6 +35,7 @@ $env:NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE = "1"
 Set-Location $repositoryRoot
 & npm.cmd ci
 & npm.cmd run build
+& npm.cmd run test:public-security
 
 Write-Host ""
 Write-Host "Trading Tools is built. Next run:"

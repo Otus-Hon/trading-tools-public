@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import publicModeModule from "../../../../lib/publicMode.js";
 
 export const runtime = "nodejs";
 
@@ -6,16 +7,17 @@ export const runtime = "nodejs";
 const { readLatestCbbcSnapshot, readTodayCbbcPriceRange } = require("@/lib/marketDb");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { refreshCbbcSnapshot, getSnapshotFreshness, readCbbcSnapshotMirror } = require("@/lib/cbbcSnapshot");
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 
 const AUTO_REFRESH_AFTER_MS = 15_000;
 
 export async function GET() {
   let snapshot = readLatestCbbcSnapshot();
   let refreshError: string | null = null;
-  let freshPayload: any = null;
+  let freshPayload: Record<string, unknown> | null = null;
 
   const freshness = getSnapshotFreshness(snapshot, AUTO_REFRESH_AFTER_MS);
-  if (!snapshot || !freshness.isFreshFetch) {
+  if (!isPublicMode() && (!snapshot || !freshness.isFreshFetch)) {
     try {
       freshPayload = await refreshCbbcSnapshot();
       snapshot = readLatestCbbcSnapshot();
@@ -26,7 +28,7 @@ export async function GET() {
 
   if (!snapshot) {
     return NextResponse.json(
-      { ok: false, error: refreshError || "No CBBC data available yet." },
+      { ok: false, error: isPublicMode() ? "No stored CBBC data is available yet." : (refreshError || "No CBBC data available yet.") },
       { status: refreshError ? 502 : 404, headers: { "Cache-Control": "no-store" } }
     );
   }

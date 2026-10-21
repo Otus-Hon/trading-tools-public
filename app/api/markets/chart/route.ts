@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import dataPathsModule from "../../../../lib/dataPaths.js";
+import publicModeModule from "../../../../lib/publicMode.js";
+import requestLimitsModule from "../../../../lib/requestLimits.js";
 
 const FETCH_TIMEOUT_MS = 10_000;
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 min
@@ -14,6 +16,8 @@ type CacheEntry = { candles: Candle[]; fetchedAt: number };
 const cache = new Map<string, CacheEntry>();
 const inFlight = new Map<string, Promise<Candle[]>>();
 const { dataPath } = dataPathsModule as unknown as { dataPath: (...segments: string[]) => string };
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
+const { isAllowedChartSymbol } = requestLimitsModule as unknown as { isAllowedChartSymbol: (symbol: string) => boolean };
 const DISK_CACHE_PATH = dataPath("market_chart_cache.json");
 
 try {
@@ -118,11 +122,14 @@ async function fetchChartCandlesUncached(symbol: string, interval: string, cache
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const symbol = searchParams.get("symbol") ?? "";
-  const forceRefresh = searchParams.get("refresh") === "1";
+  const forceRefresh = !isPublicMode() && searchParams.get("refresh") === "1";
   const interval = "1d";
 
   if (!symbol) {
     return NextResponse.json({ error: "symbol required" }, { status: 400 });
+  }
+  if (!isAllowedChartSymbol(symbol)) {
+    return NextResponse.json({ error: "Unsupported symbol." }, { status: 400 });
   }
 
   try {
@@ -137,7 +144,7 @@ export async function GET(req: NextRequest) {
     const stale = cache.get(cacheKey);
     // Stale-while-revalidate: render saved data immediately and refresh off-screen.
     if (stale?.candles?.length) {
-      if (Date.now() - stale.fetchedAt >= CACHE_TTL_MS) {
+      if (!isPublicMode() && Date.now() - stale.fetchedAt >= CACHE_TTL_MS) {
         fetchChartCandles(symbol, interval).catch(() => {});
       }
       return NextResponse.json(
@@ -145,14 +152,20 @@ export async function GET(req: NextRequest) {
         { status: 200, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=900" } }
       );
     }
+    if (isPublicMode()) {
+      return NextResponse.json(
+        { error: "No stored chart data is available for this symbol." },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
+    }
     const candles = await fetchChartCandles(symbol, interval);
     return NextResponse.json(
       { symbol, interval, candles, cached: false },
       { status: 200, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=900" } }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "fetch failed" },
+      { error: "Chart data is unavailable." },
       { status: 502, headers: { "Cache-Control": "no-store" } }
     );
   }

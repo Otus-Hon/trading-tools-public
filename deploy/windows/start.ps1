@@ -15,6 +15,9 @@ $env:TRADING_TOOLS_PUBLIC_MODE = "1"
 $env:NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE = "1"
 Set-Location $repositoryRoot
 
+if ((Test-Path $logPath) -and (Get-Item $logPath).Length -gt 10MB) {
+  Move-Item $logPath "$logPath.1" -Force
+}
 "[$(Get-Date -Format o)] Starting Trading Tools" | Out-File -FilePath $logPath -Append
 & npm.cmd start -- --hostname 127.0.0.1 --port $env:PORT *>> $logPath
 exit $LASTEXITCODE

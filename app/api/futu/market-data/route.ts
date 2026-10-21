@@ -1,47 +1,42 @@
-import { spawn } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import marketDbModule from "../../../../lib/marketDb.js";
-import dataPathsModule from "../../../../lib/dataPaths.js";
 import pythonPathModule from "../../../../lib/pythonPath.js";
 import publicModeModule from "../../../../lib/publicMode.js";
+import futuDiskCacheModule from "../../../../lib/futuDiskCache.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Payload = { ok?: boolean; error?: string; [key: string]: unknown };
-type OpenInterestRow = { date: string; value: number; change: number | null };
-
-const marketDb = marketDbModule as unknown as {
-  upsertOpenInterest: (rows: OpenInterestRow[], source: string, fetchedAt?: string) => void;
-};
 
 let fullCache: { at: number; payload: Payload } | null = null;
 let liveCache: { at: number; payload: Payload } | null = null;
 let cbbcCache: { at: number; payload: Payload } | null = null;
 let fullRefreshInFlight: Promise<Payload> | null = null;
 let cbbcRefreshInFlight: Promise<Payload> | null = null;
-const { dataPath } = dataPathsModule as unknown as { dataPath: (...segments: string[]) => string };
-const { pythonPath } = pythonPathModule as unknown as { pythonPath: () => string };
+const { spawnPythonForHttp } = pythonPathModule as unknown as {
+  spawnPythonForHttp: (args: string[], options?: Record<string, unknown>) => ReturnType<typeof import("node:child_process").spawn>;
+};
 const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
-const FULL_CACHE_PATH = dataPath("futu_market_data_cache.json");
-const EXPIRY_SELECTION_POLICY = "front_calendar_month_until_expiry_date_end_hkt";
+const futuDiskCache = futuDiskCacheModule as unknown as {
+  EXPIRY_SELECTION_POLICY: string;
+  readFullCache: () => { at: number; payload: Payload } | null;
+  readLiveCache: () => { at: number; payload: Payload } | null;
+  writeFullCache: (cache: { at: number; payload: Payload }) => void;
+  persistFutuOpenInterest: (payload: Payload) => void;
+};
+const EXPIRY_SELECTION_POLICY = futuDiskCache.EXPIRY_SELECTION_POLICY;
 
 try {
-  const saved = JSON.parse(fs.readFileSync(FULL_CACHE_PATH, "utf8")) as { at?: number; payload?: Payload };
+  const saved = futuDiskCache.readFullCache();
   if (saved?.payload?.ok) {
-    const contract = saved.payload.futuresContract as Record<string, unknown> | null | undefined;
-    const payload = contract?.selectionPolicy === EXPIRY_SELECTION_POLICY
-      ? saved.payload
-      : { ...saved.payload, futuresContract: null };
-    fullCache = { at: Number(saved.at) || 0, payload };
+    fullCache = saved;
     if (
       saved.payload.cbbcComplete === true &&
       Number(saved.payload.cbbcRowsFetched) === Number(saved.payload.cbbcTotal) &&
       Array.isArray(saved.payload.cbbcLevels)
     ) {
-      cbbcCache = { at: Number(saved.at) || 0, payload: saved.payload };
+      cbbcCache = saved;
     }
   }
 } catch {
@@ -50,8 +45,7 @@ try {
 
 function saveFullCache(cache: { at: number; payload: Payload }) {
   try {
-    fs.mkdirSync(path.dirname(FULL_CACHE_PATH), { recursive: true });
-    fs.writeFileSync(FULL_CACHE_PATH, JSON.stringify(cache));
+    futuDiskCache.writeFullCache(cache);
   } catch {
     // Memory caching remains available.
   }
@@ -71,36 +65,17 @@ function cachedFallback(error: string, liveOnly: boolean): Payload | null {
 }
 
 function persistOpenInterest(payload: Payload) {
-  const rows: OpenInterestRow[] = [];
-  const snapshots = payload.snapshots as Record<string, Record<string, unknown>> | undefined;
-  const futures = snapshots?.["HK.HSImain"];
-  const liveValue = Number(futures?.openInterest);
-  const liveDate = typeof futures?.updateTime === "string" ? futures.updateTime.slice(0, 10) : "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(liveDate) && Number.isFinite(liveValue) && liveValue > 0) {
-    rows.push({
-      date: liveDate,
-      value: liveValue,
-      change: Number.isFinite(Number(futures?.openInterestChange)) ? Number(futures?.openInterestChange) : null,
-    });
-  }
-  if (rows.length > 0) {
-    // HSImain is Futu's currently selected main contract, not HKEX's
-    // all-contract total. Persist only the current live observation here:
-    // replaying the rolling JSON history used to overwrite authoritative
-    // completed HKEX report dates on every five-second poll.
-    marketDb.upsertOpenInterest(rows, "Futu HK.HSImain snapshot", new Date().toISOString());
-  }
+  futuDiskCache.persistFutuOpenInterest(payload);
 }
 
 function runBridge(liveOnly: boolean, cbbcOnly = false): Promise<Payload> {
   return new Promise((resolve, reject) => {
     const script = path.join(process.cwd(), "scripts", "futu_market_data.py");
     const args = [
-      "-u",
       script,
       ...(cbbcOnly ? ["--cbbc-only"] : ["--skip-cbbc", ...(liveOnly ? ["--live-only"] : [])]),
     ];
-    const child = spawn(pythonPath(), args, { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawnPythonForHttp(args);
     let stdout = "";
     let stderr = "";
     const timeout = setTimeout(() => child.kill("SIGTERM"), 60_000);
@@ -167,7 +142,20 @@ function ensureCbbcRefresh(now: number): Promise<Payload> | null {
 
 export async function GET(request: NextRequest) {
   const liveOnly = request.nextUrl.searchParams.get("live") === "1";
-  const forceRefresh = !isPublicMode() && request.nextUrl.searchParams.get("refresh") === "1";
+  if (isPublicMode()) {
+    const cached = liveOnly ? futuDiskCache.readLiveCache() : futuDiskCache.readFullCache();
+    if (cached?.payload) {
+      return NextResponse.json(
+        { ...cached.payload, cached: true },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    return NextResponse.json(
+      { ok: false, error: "No cached Futu market data is available yet." },
+      { status: 503, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
   const now = Date.now();
   const cbbcRefresh = ensureCbbcRefresh(now);
   if (!cbbcCache && cbbcRefresh) await cbbcRefresh;
@@ -202,7 +190,14 @@ export async function GET(request: NextRequest) {
     const payload = await runBridge(liveOnly);
     if (payload.ok) {
       persistOpenInterest(payload);
-      if (liveOnly) liveCache = { at: now, payload };
+      if (liveOnly) {
+        liveCache = { at: now, payload };
+        try {
+          (futuDiskCacheModule as { writeLiveCache: (cache: { at: number; payload: Payload }) => void }).writeLiveCache({ at: now, payload });
+        } catch {
+          // Memory caching remains available.
+        }
+      }
       else {
         fullCache = { at: now, payload: mergeVerifiedCbbc(payload) };
         saveFullCache(fullCache);

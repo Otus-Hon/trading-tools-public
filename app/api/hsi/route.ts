@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const STOOQ_HISTORY_URL = "https://stooq.com/q/d/?s=^hsi&i=d";
 const YAHOO_HISTORY_URLS = [
   "https://query1.finance.yahoo.com/v8/finance/chart/%5EHSI",
@@ -5,8 +6,9 @@ const YAHOO_HISTORY_URLS = [
 ];
 const STOOQ_TIMEOUT_MS = 2500;
 const YAHOO_TIMEOUT_MS = 5000;
+import publicModeModule from "../../../lib/publicMode.js";
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const {
   readMoneyFlowLong,
   readHsiCandles,
@@ -545,7 +547,9 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const yearsParam = requestUrl.searchParams.get("years");
   const parsedYears = Number(yearsParam ?? "5");
-  const years = Number.isFinite(parsedYears) && parsedYears > 0 ? Math.floor(parsedYears) : 5;
+  const years = Number.isFinite(parsedYears) && parsedYears > 0
+    ? Math.min(10, Math.max(1, Math.floor(parsedYears)))
+    : 5;
 
   const now = new Date();
   const cutoff = new Date(
@@ -555,6 +559,26 @@ export async function GET(request: Request) {
   const { rows: moneyFlowRows } = readMoneyFlowLong();
   let filtered: Candle[] = [];
   let source = "stooq";
+
+  if (isPublicMode()) {
+    const cached = readHsiCandles();
+    const cachedCandles = Array.isArray(cached?.candles)
+      ? sanitizeCandles(cached.candles, moneyFlowRows).filter((candle: Candle) => candle.time >= cutoffIso)
+      : [];
+    const repaired = mergeMissingMoneyFlowCandles(cachedCandles, moneyFlowRows);
+    const candles = mergeLiveCbbcCandle(repaired.candles.filter((candle) => candle.time >= cutoffIso));
+    return new Response(JSON.stringify({
+      symbol: "HSI",
+      candles,
+      source: `${cached?.source || "stored-candles"}${repaired.added > 0 ? "+moneyflow-fill" : ""}+cbbc-live`,
+      range: `${years}y`,
+      cached: true,
+      stale: true,
+    }), {
+      status: candles.length > 0 ? 200 : 503,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  }
 
   try {
     const candles = await fetchStooqHistoryCandles(cutoff);

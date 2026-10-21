@@ -911,3 +911,30 @@ Verification:
 - The public-mode production build passed under Node 22.23.0, and the market-data audit passed with zero errors and the five previously disclosed stale-OpenD/backtest warnings.
 - The production `/market-data` page returned HTTP 200. Public requests to Python execution, manual backtest refresh, and shared market-order writes each returned HTTP 403.
 - In a headless browser after an eight-second render, Backtest showed only the Auto strategies view with stored results; the Python strategy tab was absent and the existing charts remained usable.
+
+### 2026-10-21 — Harden the Windows public deployment and separate background work
+
+User request:
+
+- Security-review every public API and deploy the existing public repository to a Windows VPS through Tailscale Funnel without exposing Futu OpenD, credentials, databases, or unrelated applications.
+- Keep the architecture simple and reusable for multiple independent applications, replace the `SYSTEM` task, add tests/health/logging/recovery, and provide exact deployment commands.
+- Commit and push the reviewed changes, but do not change the VPS or expose the site before checks pass.
+
+Implementation:
+
+- Separated the public Next.js process from a bounded `public_data_worker.js`. Public-mode routes now read verified SQLite/disk state only for Futu, CBBC, HKEX, HSI history, backtest candles, and related-market caches; only the worker may invoke Python/Futu or persist provider refreshes.
+- Added five-second Futu cash/futures and complete-CBBC worker jobs, controlled 60-second full/intraday refreshes, five-minute CITIC refreshes, 15-minute HKEX/related-market refreshes, and hourly completed-session backtest tail refreshes. Every Futu subprocess retains the localhost assertion, timeout, output cap, completeness checks, and last-verified-cache behavior.
+- Replaced the `SYSTEM` Scheduled Task with separate limited `TradingToolsWeb` and `TradingToolsWorker` tasks under a required `TradingToolsSvc` local account. Added scoped ACL setup, bounded log rotation, restart settings, one-command local deployment, an isolated updater, a sanitized health endpoint, and a health-gated Funnel publisher.
+- Added global and per-client API rate caps, request size limits, an allowlist for Yahoo chart symbols, bounded numeric inputs, generic public errors, and security headers. Migrated Next middleware to the current proxy convention.
+- Documented every endpoint and trust boundary in `SECURITY.md`, plus the multi-application loopback-port convention, exact PowerShell workflow, Funnel hostname/port/path limitations, rollback, and how to add another application without exposing it.
+- Upgraded Next.js from 16.1.6 to 16.4.2 and ECharts from 5.6.0 to 6.1.0 after the audit found a critical Windows-hosted Next.js RCE and an ECharts XSS advisory. Production dependencies now report zero advisories; five high advisories remain confined to the ESLint development dependency graph because its latest upstream release has no non-breaking resolution.
+- Added a production-server integration test proving public Python/refresh/mutation restrictions, request limits, symbol validation, sanitized failures, and browser security headers.
+
+Verification:
+
+- Pinned Node 22.23.0 production build passed on Next.js 16.4.2, targeted lint passed, and the public security integration suite passed.
+- Auto strategy tests, four expiry tests, eight backtest-engine tests, and three Python-configuration tests passed.
+- `npm audit --omit=dev` reported zero production vulnerabilities.
+- The market-data audit passed with zero errors: 227 official HKEX rows through 2026-10-20, 211 long-flow rows, 112 short-flow rows, and a complete 2,912-product/1,094-level Futu CBBC snapshot. Five expected warnings remained for the locally stale Futu cache and four backtest timeframes while OpenD was offline.
+- Observed the rendered production Main Data page complete a five-second refresh: the Refresh button returned from `REFRESHING…` to `REFRESH ALL DATA`, chart/panel geometry stayed mounted, and the browser console had zero warnings or errors.
+- No Windows VPS, Tailscale Funnel, firewall, OpenD, database, or credential change was executed from this development machine.

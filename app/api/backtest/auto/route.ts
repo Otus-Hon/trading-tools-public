@@ -15,6 +15,7 @@ const { isStale, lastClosedHkSessionDate, refreshTimeframeSingleFlight } = requi
 const { runAutoStrategies } = require("../../../../lib/autoStrategies.js") as {
   runAutoStrategies: (bars: unknown[], options: { days: number; rewardRisk: number }) => Record<string, unknown>;
 };
+const { isPublicMode } = require("../../../../lib/publicMode.js") as { isPublicMode: () => boolean };
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,9 +28,9 @@ export async function GET(request: NextRequest) {
   const headers = { "Cache-Control": "no-store" };
 
   try {
-    if (forceRefresh) {
+    if (forceRefresh && !isPublicMode()) {
       await refreshTimeframeSingleFlight("1m", true);
-    } else if (isStale(latestBar("1m")?.timeKey)) {
+    } else if (!isPublicMode() && isStale(latestBar("1m")?.timeKey)) {
       // Render the last verified SQLite history immediately while the missing
       // closed-session tail refreshes in the background. OpenD may be absent
       // in a public deployment, which must not hide stored backtest results.

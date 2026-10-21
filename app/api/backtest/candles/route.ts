@@ -32,7 +32,8 @@ function validDate(value: string) {
 
 export async function GET(request: NextRequest) {
   const end = request.nextUrl.searchParams.get("end") ?? new Date().toISOString().slice(0, 10);
-  const days = Math.min(365, Math.max(7, Number(request.nextUrl.searchParams.get("days") ?? 180)));
+  const parsedDays = Number(request.nextUrl.searchParams.get("days") ?? 180);
+  const days = Number.isFinite(parsedDays) ? Math.min(365, Math.max(7, Math.trunc(parsedDays))) : 180;
   const timeframe = request.nextUrl.searchParams.get("timeframe") ?? "15m";
   const forceRefresh = !isPublicMode() && request.nextUrl.searchParams.get("refresh") === "1";
   if (!["1m", "15m", "4h", "1d"].includes(timeframe)) return NextResponse.json({ ok: false, error: "Invalid timeframe." }, { status: 400 });
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
   const headers = { "Cache-Control": "no-store" };
 
   try {
-    if (forceRefresh || isStale(latestBar(timeframe)?.timeKey, timeframe)) {
+    if (!isPublicMode() && (forceRefresh || isStale(latestBar(timeframe)?.timeKey, timeframe))) {
       await refreshTimeframeSingleFlight(timeframe, forceRefresh);
     }
 
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       }, { headers });
     }
 
-    if (fs.existsSync(cachePath)) {
+    if (!isPublicMode() && fs.existsSync(cachePath)) {
       const cached = JSON.parse(fs.readFileSync(cachePath, "utf8")) as Payload;
       if (cached.ok && Array.isArray(cached.bars) && cached.bars.length) {
         upsertCandles(timeframe, cached.bars, "existing-json-cache");
@@ -77,6 +78,15 @@ export async function GET(request: NextRequest) {
           storage: "backtest.sqlite",
         }, { headers });
       }
+    }
+
+    if (isPublicMode()) {
+      return NextResponse.json({
+        ok: false,
+        error: "No stored backtest candles are available for this range.",
+        stale: true,
+        storage: "backtest.sqlite",
+      }, { status: 404, headers });
     }
 
     const payload = fetchEnd < start

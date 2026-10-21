@@ -1,9 +1,10 @@
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import dataPathsModule from "../../../../lib/dataPaths.js";
 import pythonPathModule from "../../../../lib/pythonPath.js";
+import publicModeModule from "../../../../lib/publicMode.js";
+import futuDiskCacheModule from "../../../../lib/futuDiskCache.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,15 +16,18 @@ type BridgePayload = {
   [key: string]: unknown;
 };
 
-const { pythonPath } = pythonPathModule as unknown as { pythonPath: () => string };
+const { spawnPythonForHttp } = pythonPathModule as unknown as {
+  spawnPythonForHttp: (args: string[]) => ReturnType<typeof import("node:child_process").spawn>;
+};
+const { isPublicMode } = publicModeModule as unknown as { isPublicMode: () => boolean };
+const { readIntradayCache } = futuDiskCacheModule as unknown as {
+  readIntradayCache: () => { at: number; payload: BridgePayload } | null;
+};
 
 function runBridge(): Promise<BridgePayload> {
   return new Promise((resolve, reject) => {
     const script = path.join(process.cwd(), "scripts", "futu_hsi_intraday.py");
-    const child = spawn(pythonPath(), ["-u", script], {
-      cwd: process.cwd(),
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const child = spawnPythonForHttp([script]);
     let stdout = "";
     let stderr = "";
     const timeout = setTimeout(() => child.kill("SIGTERM"), 60_000);
@@ -62,6 +66,13 @@ try {
 } catch {}
 
 export async function GET() {
+  if (isPublicMode()) {
+    const saved = readIntradayCache() || cache;
+    if (saved?.payload) {
+      return NextResponse.json({ ...saved.payload, cached: true, stale: Date.now() - saved.at > 60_000 }, { headers: { "Cache-Control": "no-store" } });
+    }
+    return NextResponse.json({ ok: false, error: "No cached 15-minute HSI data is available yet." }, { status: 503 });
+  }
   if (!cache || Date.now() - cache.at > 60_000) {
     pending ??= runBridge().then(payload => {
       if (!validPayload(payload)) throw new Error(payload.error || "Intraday feed unavailable");
@@ -72,8 +83,8 @@ export async function GET() {
       cache = next;
       return payload;
     }).finally(() => { pending = null; });
-    try { await pending; } catch (error) {
-      return NextResponse.json(cache ? { ...cache.payload, stale: true, error: String(error) } : { ok: false, error: String(error) }, { status: cache ? 200 : 502 });
+    try { await pending; } catch {
+      return NextResponse.json(cache ? { ...cache.payload, stale: true, error: "Intraday refresh failed." } : { ok: false, error: "Intraday refresh failed." }, { status: cache ? 200 : 502 });
     }
   }
   return NextResponse.json(cache!.payload, { headers: { "Cache-Control": "no-store" } });
