@@ -15,6 +15,7 @@
     "worker:public": "node ./scripts/public_data_worker.js",
     "lint": "eslint",
     "test:public-security": "node ./scripts/test_public_security.js",
+    "test:backtest-storage": "node ./scripts/test_backtest_storage.mjs",
     "test:windows-auto-update": "node ./scripts/test_windows_auto_update.mjs",
     "test:money-flow-seed": "node ./scripts/test_money_flow_seed.js",
     "audit:market-data": "node --env-file-if-exists=.env.local skills/audit-real-market-data/scripts/audit_market_data.js",

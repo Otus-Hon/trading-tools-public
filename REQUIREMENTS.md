@@ -11,7 +11,7 @@ This file is the durable source of truth for product behavior. It must be read t
 - Live Futu snapshots are provider-polled every five seconds. Daily datasets may be reread from SQLite/cache every five seconds but must not be force-refetched from Yahoo, CITIC, or HKEX at tick frequency.
 - Provider cadence must match metric cadence: Futu live 5 seconds, Futu daily history at most 60 seconds unless manually forced, CITIC at most 5 minutes, Yahoo daily bars 15 minutes, and HKEX reports only when the expected completed report is missing.
 - Manual **Refresh All Data** triggers the same complete pipeline immediately.
-- Backtest `HK.HSImain` history in private SQLite storage is refreshed from Futu OpenD through the last completed Hong Kong session. Today's in-progress session is not required and must not be polled in a loop. App open rereads stored closed-session bars and only calls OpenD if that last closed session is missing. The Backtest **Refresh data** button may refetch the closed-session tail. Older stored bars are preserved. A failed refresh keeps last verified candles and marks them stale if they are behind the last closed session.
+- Backtest `HK.HSImain` history in private SQLite storage is refreshed from Futu OpenD through the last completed Hong Kong session. Today's in-progress session is not required and must not be polled in a loop. The public worker prioritizes a missing closed-session tail, then backfills 1-minute data in 30-day chunks to the fixed 120-session target. Timestamp-keyed upserts preserve older stored bars across restarts and deployments. Private/local **Refresh data** may refetch the closed-session tail. A failed refresh keeps last verified candles and marks them stale if they are behind the last closed session.
 - Refreshing must not resize, shift, collapse, or reset the user's visible chart panel or logical time viewport.
 - A transient request failure must preserve the last verified chart data.
 
@@ -1204,3 +1204,31 @@ Verification:
 - Market-data audit passed with zero errors, 227 official HKEX rows, 211 long-flow rows, 112 short-flow rows, and a complete 2,886-product Futu CBBC snapshot. Four warnings remained for the intentionally preserved stale workstation Futu cache and completed-session backtest tails while local OpenD was offline.
 - Browser accessibility inspection observed the initial dashboard progress indicator at 10%, then its removal after verified data rendered. The completed page retained all market data and showed a visible 12-pixel outer margin above both the HSI panel and related-market cards.
 - The Windows Scheduled Task was not registered from the macOS development machine; registration remains an explicit one-time Administrator action on the VPS.
+
+### 2026-10-21 — Chart data labels, durable backtest history, and restored strategy editor
+
+User request:
+
+- Label the Main Data chart so long/short capital flow, open interest, volume, and CBBC data are unambiguous.
+- Remove the Auto backtest `False-break 1:2` selector, make its stored history usable for longer lookbacks, persist every verified update in SQLite, and explain/restore the missing Python strategy.
+
+Diagnosis:
+
+- A fresh public database fetched only a 14-calendar-day 1-minute tail, so the 1–120-session control could expose a lookback the server did not yet contain.
+- The Python strategy tab had been hidden in public mode because executing arbitrary visitor-supplied Python on the Internet-facing server would be remote code execution. Hiding the editor also made user-authored strategy source appear removed.
+- The strategy chart's 42 sequential history requests could exceed the public endpoint's per-minute rate limit even though server-side execution was disabled.
+
+Implementation:
+
+- Added a compact on-chart legend identifying HSI cash, bear/bull CBBC levels, futures volume, long/short capital flow, and open interest.
+- Removed the false-break reward/risk selector and fixed the existing analysis rule internally at 2R; renamed the action to **Recalculate** and added an explicit SQLite session/bar coverage badge.
+- Hard-coded a 120-session 1-minute retention target. The five-minute public worker now updates a missing closed-session tail first, then fetches older verified Futu data in 30-day chunks. Every chunk uses the existing timestamp-keyed SQLite upsert and never deletes older candles.
+- Restored the Python strategy tab in public mode as a safe editor. Its source is stored in browser local storage so deployments do not erase it; public server execution and manual mutation remain disabled, while private/local installations retain execution.
+- Limited the public strategy preview to one stored-history request, avoiding the public rate limit, and kept the full progressive history loader for private/local use.
+
+Verification:
+
+- Node 22.23.0 production build and TypeScript checks passed; public-security, Windows auto-update, backtest-storage policy, and auto-strategy tests passed.
+- Market-data audit passed with zero errors. It reported four expected stale-cache warnings while local Futu OpenD was offline; SQLite retained 1,945,800 one-minute bars and 2,495 stored dates.
+- Browser verification showed the complete Main Data legend, a live five-second countdown cycle, the Auto view without the false-break selector, populated SQLite coverage/results, and the restored public Python workspace with disabled execution controls.
+- Browser persistence was verified by editing strategy source, reloading the page, and observing the same source restored from local storage.

@@ -12,7 +12,7 @@
 | Long/short money flow | CITIC Warrants | HSI `mtype=long` / `mtype=short`, `mflow` | HKD millions, daily rolling window | Completed daily data; refetch no more than every 5 minutes |
 | Related daily markets | Yahoo chart endpoint | Exact displayed symbol | Daily closes | Server cache 15 minutes |
 | 0700/9988/0005 live point | Futu OpenD | `HK.00700`, `HK.09988`, `HK.00005` snapshot `last_price` and `prev_close_price`; percent is `(last_price - prev_close_price) / prev_close_price` | HKD last trade and percent change versus the same Futu snapshot's previous close | Poll every 5 seconds; a Yahoo history reread must never replace the verified Futu header/current bar |
-| Backtest candles | Futu OpenD | `HK.HSImain` native `1m`/`15m`/`4h`/`1d` history stored in private SQLite storage | Rolling main-contract futures OHLC; upsert latest tail, never delete older bars | Use completed Hong Kong sessions only. App open rereads SQLite and fetches OpenD only if the last closed session is missing. **Refresh data** may refetch that closed tail. Do not poll today's in-progress session. Mark stale if the last bar is behind the last closed HKT session |
+| Backtest candles | Futu OpenD | `HK.HSImain` native `1m`/`15m`/`4h`/`1d` history stored in private SQLite storage | Rolling main-contract futures OHLC; timestamp-keyed upsert, never delete older bars | Use completed Hong Kong sessions only. The public worker runs every five minutes, prioritizes a missing closed-session tail, then backfills 1-minute data in 30-day chunks to a fixed 120-session target. Do not poll today's in-progress session. Mark stale if the last bar is behind the last closed HKT session |
 
 ## Invariants
 

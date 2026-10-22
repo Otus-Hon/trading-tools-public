@@ -60,7 +60,7 @@ type AutoResult = {
   error?: string;
   stale?: boolean;
   latest?: { timeKey?: string | null };
-  coverage?: { last?: string | null };
+  coverage?: { count?: number; first?: string | null; last?: string | null; tradingDays?: number };
   days?: DayRow[];
   graphs?: GraphPayload;
   summary?: {
@@ -468,7 +468,6 @@ function BreakMaxChart({ rows }: { rows: NonNullable<GraphPayload["breakout"]> }
 
 export default function AutoStrategyPanel() {
   const [daysInput, setDaysInput] = useState("10");
-  const [rewardRisk, setRewardRisk] = useState(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AutoResult | null>(null);
@@ -483,7 +482,7 @@ export default function AutoStrategyPanel() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/backtest/auto?days=${days}&rewardRisk=${rewardRisk}${force ? "&refresh=1" : ""}`, { cache: "no-store" });
+      const response = await fetch(`/api/backtest/auto?days=${days}${force ? "&refresh=1" : ""}`, { cache: "no-store" });
       const payload = await response.json() as AutoResult;
       if (!response.ok || !payload.ok) throw new Error(payload.error || "Auto backtest failed.");
       setResult(payload);
@@ -492,7 +491,7 @@ export default function AutoStrategyPanel() {
     } finally {
       setLoading(false);
     }
-  }, [days, rewardRisk]);
+  }, [days]);
 
   useEffect(() => {
     if (days == null) return;
@@ -529,28 +528,19 @@ export default function AutoStrategyPanel() {
             />
             <span id="auto-days-help" className="sr-only">Enter 1 to 120 completed trading dates</span>
           </label>
-          <label className="flex items-center gap-2 text-sm font-semibold text-neutral-600">
-            <span>False-break</span>
-            <select
-              value={rewardRisk}
-              onChange={(event) => setRewardRisk(Number(event.target.value))}
-              className="h-9 w-20 rounded-md border border-neutral-300 bg-white px-2 text-sm font-semibold text-neutral-900"
-            >
-              {[1, 1.5, 2, 2.5, 3].map((value) => (
-                <option key={value} value={value}>1:{value}</option>
-              ))}
-            </select>
-          </label>
           <button
             type="button"
             onClick={() => void run(true)}
             disabled={loading || days == null}
             className="h-9 rounded-md bg-black px-4 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {loading ? "Running…" : "Run now"}
+            {loading ? "Calculating…" : "Recalculate"}
           </button>
           <span className={`h-9 rounded-md border px-3 py-2 text-xs font-semibold ${result?.stale ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
             {result?.stale ? `Delayed · ${result.latest?.timeKey || "unknown"}` : `Ready · ${result?.latest?.timeKey || result?.coverage?.last || "—"}`}
+          </span>
+          <span className="h-9 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+            SQLite · {Number(result?.coverage?.tradingDays ?? 0).toLocaleString("en-US")} sessions · {Number(result?.coverage?.count ?? 0).toLocaleString("en-US")} bars
           </span>
         </div>
       </div>

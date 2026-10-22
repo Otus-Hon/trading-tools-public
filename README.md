@@ -70,12 +70,13 @@ Set `TRADING_TOOLS_DATA_DIR` to use a private data directory outside the checkou
   - `POST /api/cbbc/refresh` → fetch JP/SocGen data, upsert DB, write JSON mirror.
   - `POST /api/moneyflow/refresh` → fetch CITIC long/short money flow, upsert SQL first, then write complete-history JSON mirrors.
   - `GET /api/hkex/open-interest` → migrate/fetch HKEX/Futu open interest, upsert SQL first, then return complete SQL history.
-  - `POST /api/backtest/refresh` → fetch the latest completed Futu `HK.HSImain` tail (not today's in-progress session), upsert into `private-data/runtime/backtest.sqlite`, and preserve older stored bars. App open skips OpenD when the last closed session is already stored. The Backtest **Refresh data** button can refetch that closed tail.
+  - `POST /api/backtest/refresh` → on private/local installations, fetch the latest completed Futu `HK.HSImain` tail (not today's in-progress session), upsert into `private-data/runtime/backtest.sqlite`, and preserve older stored bars.
+  - The public worker checks every five minutes. It updates a missing closed-session tail first, then backfills the stored 1-minute history in 30-day chunks until SQLite contains the hard-coded 120-session target. All updates are timestamp-keyed upserts; previous verified bars remain available after restarts and deployments.
 - Fetch scripts (manual/cron):
   - `npm run fetch` (CBBC), `npm run fetch:watch` (loop every 60s)
   - `npm run fetch:moneyflow:long`
 - The Market Data page uses Futu `HK.800000` daily candles and `HK.HSImain` volume. `/api/hsi?years=5` remains the non-Futu fallback route and uses Stooq/Yahoo with SQLite preservation.
-- The Backtest page Auto strategies view rereads stored `HK.HSImain` 1-minute candles from private SQLite storage for a typed lookback of 1–120 complete sessions, excluding today. Volatility is the day-session high–low from 09:15 to the 16:30 close. Daily top/bottom use the full futures wrap, including night 17:15–03:00. Opening-range follow-through and volatility include rolling EMA lines over up to five shown sessions with the latest EMA point value. Charts stay at a compact fixed height for long lookbacks, sample crowded axis labels, and retain exact per-date values in hover titles; the day-by-day table is collapsed by default. It does not invent bars. OpenD is called only if the last closed session is missing.
+- The Backtest page Auto strategies view rereads stored `HK.HSImain` 1-minute candles from SQLite for a typed lookback of 1–120 complete sessions, excluding today. Volatility is the day-session high–low from 09:15 to the 16:30 close. Daily top/bottom use the full futures wrap, including night 17:15–03:00. Opening-range follow-through and volatility include rolling EMA lines over up to five shown sessions with the latest EMA point value. Charts stay at a compact fixed height for long lookbacks, sample crowded axis labels, and retain exact per-date values in hover titles; the day-by-day table is collapsed by default. It does not invent bars.
 - The five-second cycle preserves chart geometry and viewport. It does not force-refetch daily Yahoo/CITIC histories every five seconds.
 
 ## Frontend behavior
@@ -84,6 +85,7 @@ Set `TRADING_TOOLS_DATA_DIR` to use a private data directory outside the checkou
   - Does not keep fetching today's in-progress bars. **Refresh data** may refetch the last closed session.
   - Python source is the single configuration surface. Its top-level literal `BACKTEST` dictionary sets timeframe, completed-session count, starting capital, spread/slippage/commission, risk, point value, margin, execution mode, and ambiguous same-bar policy. The UI has no duplicate manual configuration toolbar.
   - **Copy AI Prompt** explains and requires the complete `BACKTEST` dictionary plus `strategy(bars)`, so generated code is paste-ready without follow-up UI settings.
+  - The public site shows the Python strategy editor and preserves its source in browser storage across deployments. Arbitrary server-side Python execution remains disabled in public mode; execution is available only in the private/local installation.
 - `HsiPanel`:
   - In Market Data mode, loads Futu `HK.800000` cash candles and `HK.HSImain` volume.
   - Uses Futu OpenD as the sole live HSI source in Futu mode; Tencent is only used by the non-Futu view.

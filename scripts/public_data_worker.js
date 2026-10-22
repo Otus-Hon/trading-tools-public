@@ -23,7 +23,7 @@ const jobs = [
   { name: "cbbc-bands", everyMs: 15_000, run: refreshCbbcSnapshot },
   { name: "money-flow", everyMs: 5 * 60_000, run: refreshMoneyFlow },
   { name: "hkex-open-interest", everyMs: 15 * 60_000, run: () => refreshOpenInterestIfNeeded(false) },
-  { name: "backtest-tail", everyMs: 60 * 60_000, run: () => refreshBacktestHistories(undefined, false) },
+  { name: "backtest-storage", everyMs: 5 * 60_000, run: () => refreshBacktestHistories(undefined, false) },
   { name: "related-markets", everyMs: 15 * 60_000, run: refreshRelatedMarkets },
 ].map((job) => ({ ...job, running: false, nextAt: 0 }));
 

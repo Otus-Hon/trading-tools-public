@@ -20,10 +20,10 @@ const { isPublicMode } = require("../../../../lib/publicMode.js") as { isPublicM
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 180;
+const AUTO_REWARD_RISK = 2;
 
 export async function GET(request: NextRequest) {
   const days = Math.min(120, Math.max(1, Math.round(Number(request.nextUrl.searchParams.get("days") ?? 10) || 10)));
-  const rewardRisk = Math.min(10, Math.max(0.5, Number(request.nextUrl.searchParams.get("rewardRisk") ?? 2) || 2));
   const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
   const headers = { "Cache-Control": "no-store" };
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     startDate.setUTCDate(startDate.getUTCDate() - 4);
     const start = startDate.toISOString().slice(0, 10);
     const bars = readCandles("1m", start, end);
-    const result = runAutoStrategies(bars, { days, rewardRisk });
+    const result = runAutoStrategies(bars, { days, rewardRisk: AUTO_REWARD_RISK });
     const latest = latestBar("1m");
     return NextResponse.json({
       ...result,

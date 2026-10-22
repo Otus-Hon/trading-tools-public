@@ -82,6 +82,8 @@ if (-not $releaseHealthy) {
 Set-InstallProgress 76 "Running public-security integration tests"
 & npm.cmd run test:public-security
 if ($LASTEXITCODE -ne 0) { throw "Public-security integration tests failed." }
+& npm.cmd run test:backtest-storage
+if ($LASTEXITCODE -ne 0) { throw "Backtest storage policy test failed." }
 & npm.cmd run test:windows-auto-update
 if ($LASTEXITCODE -ne 0) { throw "Windows automatic-update contract test failed." }
 Set-InstallProgress 84 "Auditing production dependencies"

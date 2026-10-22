@@ -1868,6 +1868,21 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
       >
         <div ref={containerRef} className="h-full w-full" />
         {useFutuData && (
+          <div
+            aria-label="Chart data legend"
+            className="pointer-events-none absolute left-3 top-3 z-[4] flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-neutral-200/90 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-neutral-600 shadow-sm backdrop-blur"
+          >
+            <span className="text-neutral-400">Top → bottom</span>
+            <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-teal-500" />HSI cash</span>
+            <span><i className="mr-1 inline-block h-0.5 w-3 bg-red-400" />Bear CBBC</span>
+            <span><i className="mr-1 inline-block h-0.5 w-3 bg-emerald-500" />Bull CBBC</span>
+            <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-cyan-500" />Volume</span>
+            <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-blue-500" />Long capital flow</span>
+            <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-red-600" />Short capital flow</span>
+            <span><i className="mr-1 inline-block h-0.5 w-3 bg-violet-500" />Open interest</span>
+          </div>
+        )}
+        {useFutuData && (
           <>
             <div className="pointer-events-none absolute bottom-7 left-3 z-[3] text-[10px] font-semibold text-violet-600/70">
               Open interest · HKEX all-contract total

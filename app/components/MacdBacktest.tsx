@@ -653,6 +653,7 @@ function EquityCurve({ trades, initialCapitalUsd, fxRate, selectedTradeId, onSel
 }
 
 export default function MacdBacktest() {
+  const publicMode = process.env.NEXT_PUBLIC_TRADING_TOOLS_PUBLIC_MODE === "1";
   const [bars, setBars] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyComplete, setHistoryComplete] = useState(false);
@@ -675,8 +676,27 @@ export default function MacdBacktest() {
   const [refreshingHistory, setRefreshingHistory] = useState(false);
   const [historyStale, setHistoryStale] = useState(false);
   const [latestBarKey, setLatestBarKey] = useState<string | null>(null);
+  const [strategyStorageReady, setStrategyStorageReady] = useState(false);
   const codeConfig = useMemo(() => pythonBacktestConfig(code), [code]);
   const timeframe = codeConfig.timeframe;
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("trading-tools:python-strategy:v1");
+      if (saved) setCode(saved);
+    } finally {
+      setStrategyStorageReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!strategyStorageReady) return;
+    try {
+      window.localStorage.setItem("trading-tools:python-strategy:v1", code);
+    } catch {
+      // The editor remains usable when a browser blocks or exhausts local storage.
+    }
+  }, [code, strategyStorageReady]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -724,7 +744,8 @@ export default function MacdBacktest() {
 
       let end = lastClosedHkSessionDate();
       let merged: Candle[] = [];
-      for (let batch = 0; batch < config.chunks && end > EARLIEST_DATE; batch += 1) {
+      const batchLimit = publicMode ? 1 : config.chunks;
+      for (let batch = 0; batch < batchLimit && end > EARLIEST_DATE; batch += 1) {
         try {
           const response = await fetch(`/api/backtest/candles?end=${end}&days=${config.days}&timeframe=${timeframe}`, { signal: controller.signal, cache: "no-store" });
           const payload = (await response.json()) as ChunkPayload;
@@ -764,7 +785,7 @@ export default function MacdBacktest() {
     };
     load();
     return () => { cancelled = true; controller.abort(); };
-  }, [timeframe, refreshNonce]);
+  }, [publicMode, timeframe, refreshNonce]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -793,6 +814,10 @@ export default function MacdBacktest() {
   const lookback = useMemo(() => sessionWindow(bars, sessions), [bars, sessions]);
 
   const runStrategy = async () => {
+    if (publicMode) {
+      setRunError("Your Python source is saved in this browser. Server execution stays disabled on the public site for security.");
+      return;
+    }
     if (bars.length < 30 || phase === "calculating") return;
     const capital = codeConfig.startingCapitalUsd * usdHkd;
     if (lookback.count < 1) { setRunError("Need at least one completed session in stored history."); return; }
@@ -929,13 +954,20 @@ export default function MacdBacktest() {
           <button
             type="button"
             onClick={() => setRefreshNonce((value) => value + 1)}
-            disabled={refreshingHistory || loading}
+            disabled={publicMode || refreshingHistory || loading}
+            title={publicMode ? "The background worker updates and preserves SQLite history." : undefined}
             className="rounded-md border border-neutral-300 bg-white px-3 py-1 font-semibold text-neutral-800 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {refreshingHistory ? "Refreshing…" : "Refresh data"}
+            {publicMode ? "Worker updates SQLite" : refreshingHistory ? "Refreshing…" : "Refresh data"}
           </button>
         </div>
       </div>
+
+      {publicMode && (
+        <div className="shrink-0 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+          Safe public workspace: your Python source is saved only in this browser and survives site updates. Running arbitrary Python on the public server is disabled; use the private/local installation to execute it.
+        </div>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,64fr)_minmax(290px,36fr)] gap-3">
         <section className="flex min-h-0 flex-col gap-2">
@@ -960,7 +992,7 @@ export default function MacdBacktest() {
               <div><div className="text-sm font-bold">Python Code</div><div className="text-[10px] text-neutral-500">BACKTEST config + strategy(bars) are the complete machine</div></div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={copyAiPrompt} className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${promptCopied ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"}`}>{promptCopied ? "✓ Copied" : "Copy AI Prompt"}</button>
-                {phase === "replaying" ? <button type="button" onClick={() => { setPlaybackIndex(trades.length - 1); setPhase("ready"); }} className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold">Finish now</button> : <button type="button" onClick={runStrategy} disabled={phase === "calculating" || bars.length < 30} className="rounded-md bg-black px-4 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{phase === "calculating" ? "Running…" : "▶ Run"}</button>}
+                {phase === "replaying" ? <button type="button" onClick={() => { setPlaybackIndex(trades.length - 1); setPhase("ready"); }} className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold">Finish now</button> : <button type="button" onClick={runStrategy} disabled={publicMode || phase === "calculating" || bars.length < 30} title={publicMode ? "Saved locally; run it from the private installation." : undefined} className="rounded-md bg-black px-4 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{publicMode ? "Saved locally" : phase === "calculating" ? "Running…" : "▶ Run"}</button>}
               </div>
             </div>
             {runError && <div className="border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{runError}</div>}
