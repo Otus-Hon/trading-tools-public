@@ -1233,3 +1233,15 @@ Verification:
 - Browser verification showed the complete Main Data legend, a live five-second countdown cycle, the Auto view without the false-break selector, populated SQLite coverage/results, and the restored public Python workspace with disabled execution controls.
 - Browser persistence was verified by editing strategy source, reloading the page, and observing the same source restored from local storage.
 - Live deployment monitoring found the scheduled task remained on the previous release when it ran as `trader` against an Administrator-owned checkout. Added an exact, command-scoped Git `safe.directory=C:\TradingTools\app` setting to update and install Git commands so the service account can deploy without disabling ownership protection globally.
+
+### 2026-10-21 — Label both capital-flow panes
+
+User request:
+
+- Add a clear label for capital flows on the Main Data chart.
+
+Implementation:
+
+- Added an in-pane label to the long/好倉 capital-flow histogram identifying blue as inflow, red as outflow, and the unit as HKD million.
+- Added a separate in-pane label to the short/淡倉 capital-flow histogram identifying red as inflow, blue as outflow, and the unit as HKD million.
+- Kept the existing provider, series values, SQLite history, pane geometry, and five-second refresh behavior unchanged.

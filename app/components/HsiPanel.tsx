@@ -1895,6 +1895,12 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
             <div className="pointer-events-none absolute left-3 top-[53%] z-[3] text-[9px] font-semibold text-gray-600/60">
               Volume · contracts · 20D avg baseline
             </div>
+            <div className="pointer-events-none absolute left-3 top-[65%] z-[3] rounded-sm bg-white/75 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700/80">
+              Long capital flow 好倉 · blue inflow · red outflow · HKD million
+            </div>
+            <div className="pointer-events-none absolute left-3 top-[77%] z-[3] rounded-sm bg-white/75 px-1.5 py-0.5 text-[9px] font-semibold text-red-700/80">
+              Short capital flow 淡倉 · red inflow · blue outflow · HKD million
+            </div>
           </>
         )}
         {screenshotCopied && (
@@ -1976,7 +1982,7 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
       </div>
       <div className="mt-1 min-h-[28px] text-[10px] leading-[14px]">
         <div className="flex flex-wrap items-center justify-between gap-x-3 text-[var(--muted)]">
-          <span>好倉資金流 / 淡倉資金流 — Blue: inflow, Red: outflow (HKD million)</span>
+          <span>Capital flow · Long 好倉: blue inflow / red outflow · Short 淡倉: red inflow / blue outflow (HKD million)</span>
           {moneyflowCoverage && (
             <span className="tabular-nums">
               CITIC SQLite · L {moneyflowCoverage.longRows} / S {moneyflowCoverage.shortRows}
