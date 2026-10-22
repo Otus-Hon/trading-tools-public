@@ -113,7 +113,7 @@ Set `TRADING_TOOLS_DATA_DIR` to use a private data directory outside the checkou
 - `GET /api/hkex/open-interest` — all stored open-interest rows from SQLite; refreshes missing HKEX history when needed.
 - `POST /api/backtest/refresh` — fetch completed Futu `HK.HSImain` candles into private SQLite storage for `1m`/`15m`/`4h`/`1d`; never deletes older stored bars; does not poll today's in-progress session unless already stored.
 - `GET /api/backtest/candles` — read stored backtest candles through the last closed Hong Kong session; refreshes the Futu tail only when that closed session is missing or `refresh=1` is set.
-- `GET /api/backtest/auto?days=<1-120>&rewardRisk=<number>` — run the Auto strategies panel on stored `HK.HSImain` 1-minute bars. Volatility uses 09:15–16:30 day-session range. Top/bottom include night futures. Opening-range breakout still uses 09:15–09:29.
+- `GET /api/backtest/auto?days=<1-120>` — run the Auto strategies panel on stored `HK.HSImain` 1-minute bars. Volatility uses 09:15–16:30 day-session range. Top/bottom include night futures. Opening-range breakout still uses 09:15–09:29; the internal false-break analysis remains fixed at 2R.
 
 ## Environment knobs
 - `TRADING_TOOLS_DATA_DIR`: absolute or relative private runtime-data directory. Defaults to `private-data/runtime/`.
@@ -130,7 +130,7 @@ The supported VPS layout and PowerShell installer are documented in [`deploy/win
 
 Public deployments use two low-privilege processes: a loopback-only Next.js read server and a separate provider-refresh worker. Public HTTP requests cannot launch Python/Futu work or mutate shared data. The endpoint inventory, trust boundaries, confirmed remediations, and remaining risks are documented in [`SECURITY.md`](SECURITY.md).
 
-The Windows deployment gate stops only Trading Tools processes before native dependency work, verifies SQLite in a fresh Node process, runs the public-security integration suite on Windows, and proves the limited service identity can use the private data directory before accepting startup. It never publishes Funnel automatically.
+The Windows deployment gate stops only Trading Tools processes before native dependency work, verifies SQLite in a fresh Node process, runs the public-security integration suite on Windows, and proves the limited service identity can use the private data directory before accepting startup. The updater uses a command-scoped `safe.directory=C:\TradingTools\app` setting so the dedicated `trader` account can update an Administrator-created checkout without weakening Git's global ownership checks. It never publishes Funnel automatically.
 
 ## Production notes
 - `npm run dev`, `npm run dev:web`, `npm run build`, and `npm start` all run the SQLite ABI preflight before using the application.

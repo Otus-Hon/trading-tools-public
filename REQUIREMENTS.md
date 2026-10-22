@@ -1232,3 +1232,4 @@ Verification:
 - Market-data audit passed with zero errors. It reported four expected stale-cache warnings while local Futu OpenD was offline; SQLite retained 1,945,800 one-minute bars and 2,495 stored dates.
 - Browser verification showed the complete Main Data legend, a live five-second countdown cycle, the Auto view without the false-break selector, populated SQLite coverage/results, and the restored public Python workspace with disabled execution controls.
 - Browser persistence was verified by editing strategy source, reloading the page, and observing the same source restored from local storage.
+- Live deployment monitoring found the scheduled task remained on the previous release when it ran as `trader` against an Administrator-owned checkout. Added an exact, command-scoped Git `safe.directory=C:\TradingTools\app` setting to update and install Git commands so the service account can deploy without disabling ownership protection globally.

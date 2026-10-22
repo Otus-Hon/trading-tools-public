@@ -53,7 +53,7 @@ Set-Location $repositoryRoot
 Set-InstallProgress 24 "Checking whether this release is already built"
 
 $lockHash = (Get-FileHash (Join-Path $repositoryRoot "package-lock.json") -Algorithm SHA256).Hash
-$releaseId = (& git.exe rev-parse HEAD).Trim()
+$releaseId = (& git.exe -c "safe.directory=$repositoryRoot" rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw "Unable to identify the checked-out release." }
 $expectedStamp = "$releaseId $lockHash"
 $installedStamp = if (Test-Path $releaseStampPath) { (Get-Content $releaseStampPath -Raw).Trim() } else { "" }

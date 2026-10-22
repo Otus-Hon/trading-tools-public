@@ -16,7 +16,8 @@ const contracts = {
     "MultipleInstances IgnoreNew",
   ],
   "deploy/windows/update.ps1": [
-    "git.exe fetch --quiet origin main",
+    "safe.directory=$repositoryRoot",
+    "Invoke-DeploymentGit fetch --quiet origin main",
     "merge-base --is-ancestor",
     "Already current",
   ],
