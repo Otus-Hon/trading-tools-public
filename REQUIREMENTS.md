@@ -1245,3 +1245,24 @@ Implementation:
 - Added an in-pane label to the long/好倉 capital-flow histogram identifying blue as inflow, red as outflow, and the unit as HKD million.
 - Added a separate in-pane label to the short/淡倉 capital-flow histogram identifying red as inflow, blue as outflow, and the unit as HKD million.
 - Kept the existing provider, series values, SQLite history, pane geometry, and five-second refresh behavior unchanged.
+
+### 2026-10-22 — Correct the VPS chart legend for capital flow
+
+User request:
+
+- Correct the capital-flow tags on the deployed VPS chart so the blue/red meanings are accurate for both long and short positions.
+
+Diagnosis:
+
+- The VPS source already colored the histogram bars and in-pane descriptions correctly, but the compact top legend used one blue marker for the entire Long series and one red marker for the entire Short series. That implied each position side had only one color and hid the opposite-color outflow meaning.
+
+Implementation:
+
+- Replaced the misleading single blue Long marker and single red Short marker in the top chart legend.
+- The Long tag now shows blue inflow and red outflow; the Short tag shows red inflow and blue outflow.
+- Kept the existing in-pane labels, CITIC values, SQLite persistence, and five-second refresh behavior unchanged.
+
+Verification:
+
+- The pinned Node 22.23.0 production build and TypeScript checks passed.
+- The market-data audit passed with zero errors against the preserved data store: 229 official HKEX rows, 213 long-flow rows, and 114 short-flow rows. Four existing workstation freshness warnings remained for the offline Futu cache and completed-session backtest tails.

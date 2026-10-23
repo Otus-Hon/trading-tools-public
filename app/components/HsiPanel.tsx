@@ -1877,8 +1877,16 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
             <span><i className="mr-1 inline-block h-0.5 w-3 bg-red-400" />Bear CBBC</span>
             <span><i className="mr-1 inline-block h-0.5 w-3 bg-emerald-500" />Bull CBBC</span>
             <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-cyan-500" />Volume</span>
-            <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-blue-500" />Long capital flow</span>
-            <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-red-600" />Short capital flow</span>
+            <span>
+              Long flow:
+              <i className="mx-1 inline-block h-2 w-2 rounded-sm bg-blue-500" />in
+              <i className="mx-1 inline-block h-2 w-2 rounded-sm bg-red-600" />out
+            </span>
+            <span>
+              Short flow:
+              <i className="mx-1 inline-block h-2 w-2 rounded-sm bg-red-600" />in
+              <i className="mx-1 inline-block h-2 w-2 rounded-sm bg-blue-500" />out
+            </span>
             <span><i className="mr-1 inline-block h-0.5 w-3 bg-violet-500" />Open interest</span>
           </div>
         )}
