@@ -19,7 +19,9 @@ const contracts = {
     "safe.directory=$repositoryRoot",
     "Invoke-DeploymentGit fetch --quiet origin main",
     "merge-base --is-ancestor",
-    "Already current",
+    "installed-release.txt",
+    "installedReleaseIsCurrent",
+    "repairing the incomplete installed release",
   ],
   "deploy/windows/install.ps1": [
     "Write-Progress",

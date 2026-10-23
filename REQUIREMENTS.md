@@ -1266,3 +1266,26 @@ Verification:
 
 - The pinned Node 22.23.0 production build and TypeScript checks passed.
 - The market-data audit passed with zero errors against the preserved data store: 229 official HKEX rows, 213 long-flow rows, and 114 short-flow rows. Four existing workstation freshness warnings remained for the offline Futu cache and completed-session backtest tails.
+
+### 2026-10-22 — Recover a pulled but unbuilt VPS release
+
+User request:
+
+- Diagnose why the VPS updater reported commit `1358338` as current while the public site still displayed the previous legend, and finish the deployment safely.
+
+Diagnosis:
+
+- The updater returned early whenever local Git `HEAD` matched `origin/main`, without checking whether that commit had completed the production build and written the installed-release stamp.
+- A prior update had pulled the source commit but had not installed it, leaving the old `.next` build running. Re-running the updater therefore incorrectly said that no build was required.
+
+Implementation:
+
+- The updater now treats source state and installed-release state separately.
+- It skips work only when Git is current, `.next/BUILD_ID` exists, and the installed-release stamp matches both the current commit and package-lock hash.
+- If the source is current but the build or stamp is incomplete, it continues through the existing build, security tests, task restart, and deployment verification instead of returning early.
+- Extended the Windows auto-update contract test to require the installed-release recovery checks.
+
+Verification:
+
+- The deterministic Windows automatic-update contract test passed under the pinned Node 22.23.0 runtime.
+- Confirmed the recovery path retains the existing fail-closed build, security-test, task-restart, and deployment-verification sequence.

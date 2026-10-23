@@ -23,19 +23,31 @@ if ($LASTEXITCODE -ne 0) { throw "Unable to fetch origin/main; the running relea
 $targetCommit = (Invoke-DeploymentGit rev-parse origin/main).Trim()
 if ($LASTEXITCODE -ne 0) { throw "Unable to read origin/main." }
 
-if (-not $Force -and $currentCommit -eq $targetCommit) {
-  Set-UpdateProgress 100 "Already current - no build required"
+$releaseStampPath = "C:\TradingTools\config\installed-release.txt"
+$buildIdPath = Join-Path $repositoryRoot ".next\BUILD_ID"
+$lockHash = (Get-FileHash (Join-Path $repositoryRoot "package-lock.json") -Algorithm SHA256).Hash
+$expectedStamp = "$currentCommit $lockHash"
+$installedStamp = if (Test-Path $releaseStampPath) { (Get-Content $releaseStampPath -Raw).Trim() } else { "" }
+$installedReleaseIsCurrent = (Test-Path $buildIdPath) -and $installedStamp -eq $expectedStamp
+
+if (-not $Force -and $currentCommit -eq $targetCommit -and $installedReleaseIsCurrent) {
+  Set-UpdateProgress 100 "Already current - installed release verified"
   Write-Progress -Activity "Updating Trading Tools" -Completed
-  Write-Host "Trading Tools is already current at $currentCommit. No build was run."
+  Write-Host "Trading Tools source and installed release are current at $currentCommit. No build was run."
   return
 }
 
-Invoke-DeploymentGit merge-base --is-ancestor $currentCommit $targetCommit
-if ($LASTEXITCODE -ne 0) { throw "origin/main is not a fast-forward from the deployed commit; update stopped." }
-Set-UpdateProgress 18 "Downloading the new source"
-Invoke-DeploymentGit pull --ff-only origin main
-if ($LASTEXITCODE -ne 0) { throw "git pull --ff-only failed; the running release was not changed." }
-if ((Invoke-DeploymentGit rev-parse HEAD).Trim() -ne $targetCommit) { throw "The checkout did not reach the expected GitHub commit." }
+if ($currentCommit -ne $targetCommit) {
+  Invoke-DeploymentGit merge-base --is-ancestor $currentCommit $targetCommit
+  if ($LASTEXITCODE -ne 0) { throw "origin/main is not a fast-forward from the deployed commit; update stopped." }
+  Set-UpdateProgress 18 "Downloading the new source"
+  Invoke-DeploymentGit pull --ff-only origin main
+  if ($LASTEXITCODE -ne 0) { throw "git pull --ff-only failed; the running release was not changed." }
+  if ((Invoke-DeploymentGit rev-parse HEAD).Trim() -ne $targetCommit) { throw "The checkout did not reach the expected GitHub commit." }
+} else {
+  Set-UpdateProgress 18 "Source is current - repairing the incomplete installed release"
+  Write-Host "Source is current at $currentCommit, but the installed release stamp or build is incomplete. Continuing with build and verification."
+}
 
 Set-UpdateProgress 30 "Building and testing the new release"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
