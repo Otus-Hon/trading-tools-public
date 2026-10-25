@@ -1289,3 +1289,19 @@ Verification:
 
 - The deterministic Windows automatic-update contract test passed under the pinned Node 22.23.0 runtime.
 - Confirmed the recovery path retains the existing fail-closed build, security-test, task-restart, and deployment-verification sequence.
+
+### 2026-10-24 — Simplify the VPS chart legend
+
+User request:
+
+- Remove the long-flow, short-flow, and open-interest entries marked in the compact Main Data chart legend.
+
+Implementation:
+
+- Removed only those three entries from the compact top legend.
+- Preserved the long-flow, short-flow, and official HKEX open-interest panes, their in-pane labels, SQLite persistence, and five-second refresh workflow.
+
+Verification:
+
+- The pinned Node 22.23.0 production build passed, including the SQLite ABI preflight and TypeScript checks.
+- Confirmed the resulting compact legend contains only the pane-order hint, HSI cash, bear CBBC, bull CBBC, and volume entries.
