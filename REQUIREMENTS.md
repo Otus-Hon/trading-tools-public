@@ -1305,3 +1305,24 @@ Verification:
 
 - The pinned Node 22.23.0 production build passed, including the SQLite ABI preflight and TypeScript checks.
 - Confirmed the resulting compact legend contains only the pane-order hint, HSI cash, bear CBBC, bull CBBC, and volume entries.
+
+### 2026-10-24 — Remove the VPS build-time Google Fonts dependency
+
+User request:
+
+- Repair the VPS update after the pushed legend change triggered a production-build failure.
+
+Diagnosis:
+
+- The application imported Geist and Geist Mono through `next/font/google`, which makes every clean production build fetch Google Fonts. The same build failed locally when that host could not resolve `fonts.googleapis.com`, matching the VPS failure stage before scheduled tasks were restarted.
+
+Implementation:
+
+- Removed the build-time Google Fonts import and switched the app to a local Windows/system sans-serif and monospace stack.
+- Kept the dashboard layout, market-data workflows, persistence, and five-second refresh behavior unchanged.
+- The fail-safe updater correctly left the previous scheduled tasks untouched when the failed build returned nonzero.
+
+Verification:
+
+- A clean pinned-Node production build passed inside the network-restricted sandbox, proving compilation no longer depends on `fonts.googleapis.com`.
+- The public-security integration suite and Windows automatic-update contract test passed.
