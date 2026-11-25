@@ -4,12 +4,12 @@ import MarketMiniCharts from "../components/MarketMiniCharts";
 export default function MarketDataPage() {
   return (
     <main
-      className="dashboard mx-auto h-[calc(100dvh-3.5625rem)] w-full max-w-none overflow-hidden bg-[var(--bg)] px-4 text-[var(--text)] md:px-6 lg:px-8"
+      className="dashboard mx-auto min-h-[100dvh] w-full max-w-none overflow-visible bg-[var(--bg)] px-3 text-[var(--text)] sm:px-4 md:px-6 lg:px-8 xl:h-[calc(100dvh-3.5625rem)] xl:min-h-0 xl:overflow-hidden"
       style={{ paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
     >
-      <div className="grid h-full grid-cols-1 gap-5 xl:grid-cols-[minmax(0,74fr)_minmax(360px,26fr)]">
-        <section className="card flex min-h-[520px] flex-col lg:h-full lg:min-h-0">
-          <div className="min-h-[480px] flex-1 lg:min-h-0">
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:h-full xl:grid-cols-[minmax(0,74fr)_minmax(360px,26fr)] xl:gap-5">
+        <section className="card flex min-w-0 flex-col p-3 sm:p-5 xl:h-full xl:min-h-0">
+          <div className="min-w-0 xl:min-h-0 xl:flex-1">
             <HsiPanel refreshToken={0} dataMode="futu" />
           </div>
         </section>

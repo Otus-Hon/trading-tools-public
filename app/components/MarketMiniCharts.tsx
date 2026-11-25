@@ -426,25 +426,22 @@ function MiniChart({
 export default function MarketMiniCharts() {
   return (
     <aside
-      className="grid h-full min-h-0 gap-3"
+      className="flex min-w-0 flex-col gap-3 xl:grid xl:h-full xl:min-h-0"
       style={{ gridTemplateRows: "0.85fr 1.15fr 0.9fr repeat(3, minmax(0, 1fr))" }}
       aria-label="Related daily markets"
     >
-      <div className="grid min-h-0 min-w-0 grid-cols-3 gap-3">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 xl:min-h-0">
         {TOP_MARKETS.map((market) => (
-          <MiniChart
-            key={market.label}
-            market={market}
-            compact
-            sessionCount={TOP_MARKET_SESSION_COUNT}
-          />
+          <div key={market.label} className="h-[160px] min-w-0 sm:h-[150px] xl:h-full xl:min-h-0">
+            <MiniChart market={market} compact sessionCount={TOP_MARKET_SESSION_COUNT} />
+          </div>
         ))}
       </div>
-      <MiniChart market={HSTECH_MARKET} />
-      <div className="grid min-h-0 min-w-0 grid-cols-2 gap-3">
-        {FX_MARKETS.map((market) => <MiniChart key={market.label} market={market} compact />)}
+      <div className="h-[180px] xl:h-full xl:min-h-0"><MiniChart market={HSTECH_MARKET} /></div>
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:min-h-0">
+        {FX_MARKETS.map((market) => <div key={market.label} className="h-[160px] min-w-0 xl:h-full xl:min-h-0"><MiniChart market={market} compact /></div>)}
       </div>
-      {LOWER_MARKETS.map((market) => <MiniChart key={market.label} market={market} />)}
+      {LOWER_MARKETS.map((market) => <div key={market.label} className="h-[180px] xl:h-full xl:min-h-0"><MiniChart market={market} /></div>)}
     </aside>
   );
 }

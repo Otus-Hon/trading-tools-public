@@ -104,8 +104,8 @@ export default function HsiIntradayModal({ onClose, levels, cbbcStale }: {
   }, [levels, ready, spotPrice]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-6" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="hsi-intraday-title" tabIndex={-1} className="flex h-[76vh] w-[min(72vw,1400px)] min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-2xl outline-none max-md:w-full">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-2 sm:p-6" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="hsi-intraday-title" tabIndex={-1} className="flex h-[85dvh] w-[min(72vw,1400px)] min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-2xl outline-none sm:h-[76vh] sm:p-5 max-md:w-full">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div><h2 id="hsi-intraday-title" className="font-semibold text-gray-900">HSI Spot · 15 minute · CBBC</h2><p className="mt-1 text-xs text-gray-500">Futu HK.800000 HSI spot index · {status}</p></div>
           <button onClick={onClose} aria-label="Close 15-minute chart" className="rounded-md px-3 py-1 text-xl text-gray-500 hover:bg-gray-100">×</button>

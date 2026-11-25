@@ -1326,3 +1326,22 @@ Verification:
 
 - A clean pinned-Node production build passed inside the network-restricted sandbox, proving compilation no longer depends on `fonts.googleapis.com`.
 - The public-security integration suite and Windows automatic-update contract test passed.
+
+### 2026-11-24 — Make the public site usable on phones and rewrite the GitHub README
+
+User request:
+
+- Fix the public Trading Tools site on a mobile phone and rewrite the GitHub page in plain, human-readable language.
+
+Implementation:
+
+- Let Main Data and Backtest scroll naturally below desktop widths instead of clipping the page to one viewport.
+- Wrapped the navigation and HSI controls on narrow screens, gave the main chart and related-market cards readable phone heights, and fitted the 15-minute dialog to the phone viewport.
+- Stacked the Python backtest chart, code editor, and statistics on phones while keeping desktop layout and existing workflows.
+- Rewrote `README.md` around what visitors can see, how to read the chart, the source of each number, and how to run the app. Kept detailed contracts in this file.
+
+Verification:
+
+- Pinned Node 22.23.0 production build and TypeScript checks passed; SQLite ABI preflight passed.
+- Public-security integration and backtest SQLite retention tests passed.
+- In a 390 × 844 browser viewport, Main Data, Auto backtest, and Python backtest remained within the viewport width and scrolled to their lower content. The live-refresh countdown completed a five-second cycle. Local provider data was unavailable, so live chart values were not independently checked in this browser session.

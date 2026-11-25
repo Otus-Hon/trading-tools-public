@@ -8,7 +8,7 @@ export default function BacktestPage() {
   const [view, setView] = useState<"auto" | "python">("auto");
 
   return (
-    <main className="flex h-[calc(100dvh-3.5625rem)] flex-col overflow-hidden bg-[#fafafa] px-4 py-4 text-neutral-950 md:px-6 lg:px-8">
+    <main className="flex min-h-[100dvh] flex-col overflow-visible bg-[#fafafa] px-3 py-4 text-neutral-950 sm:px-4 md:px-6 lg:px-8 xl:h-[calc(100dvh-3.5625rem)] xl:min-h-0 xl:overflow-hidden">
       <div className="mb-3 flex shrink-0 rounded-lg border border-neutral-200 bg-white p-0.5" aria-label="Backtest views">
         <button
           type="button"
@@ -25,7 +25,7 @@ export default function BacktestPage() {
           Python strategy
         </button>
       </div>
-      <div className="min-h-0 flex-1">
+      <div className="min-w-0 flex-1">
         {view === "auto" ? <AutoStrategyPanel /> : <MacdBacktest />}
       </div>
     </main>

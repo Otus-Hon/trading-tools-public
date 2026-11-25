@@ -1838,7 +1838,7 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
   );
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="relative flex h-full min-w-0 flex-col">
       {intradayOpen && <HsiIntradayModal onClose={closeIntraday} levels={liveCbbcPayload?.cbbcLevels ?? []} cbbcStale={liveStale || Boolean(liveCbbcPayload?.stale) || liveCbbcPayload?.cbbcComplete !== true} />}
       {staleMessage && !isLoading && !hasError && (
         <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -1847,14 +1847,14 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
       )}
       {useFutuData ? (
         <div className="mb-1.5 grid items-center gap-2 2xl:grid-cols-[minmax(560px,640px)_minmax(280px,440px)_minmax(330px,1fr)] 2xl:gap-4">
-          <div className="flex min-w-0 items-center gap-3 2xl:h-[52px]">
-            <h2 className="card-title shrink-0">HSI (Daily) · Futu verified</h2>
+          <div className="flex min-w-0 flex-wrap items-center gap-2 2xl:h-[52px]">
+            <h2 className="card-title">HSI (Daily) · Futu verified</h2>
             <div className="flex flex-wrap items-center gap-2">{statusControls}</div>
           </div>
           <div className="w-full max-w-[520px] justify-self-center">
             <FuturesExpiryProgress />
           </div>
-          <div className="flex min-w-max flex-nowrap items-center justify-end gap-2">{actionControls}</div>
+          <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 2xl:justify-end">{actionControls}</div>
         </div>
       ) : (
         <div className="mb-1.5 flex items-center gap-2">
@@ -1864,13 +1864,13 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
       )}
       <div
         ref={chartShotRef}
-        className="relative flex-1 overflow-hidden rounded-lg border border-[var(--border)] bg-[rgba(0,0,0,0.02)] shadow-sm min-h-[420px]"
+        className="relative h-[520px] min-w-0 flex-none overflow-hidden rounded-lg border border-[var(--border)] bg-[rgba(0,0,0,0.02)] shadow-sm sm:h-[580px] xl:h-auto xl:min-h-[420px] xl:flex-1"
       >
         <div ref={containerRef} className="h-full w-full" />
         {useFutuData && (
           <div
             aria-label="Chart data legend"
-            className="pointer-events-none absolute left-3 top-3 z-[4] flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-neutral-200/90 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-neutral-600 shadow-sm backdrop-blur"
+            className="pointer-events-none absolute left-3 top-3 z-[4] hidden max-w-[calc(100%-5rem)] flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-neutral-200/90 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-neutral-600 shadow-sm backdrop-blur sm:flex"
           >
             <span className="text-neutral-400">Top → bottom</span>
             <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-teal-500" />HSI cash</span>

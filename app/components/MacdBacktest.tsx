@@ -932,13 +932,13 @@ export default function MacdBacktest() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="flex shrink-0 items-center justify-between gap-4">
+    <div className="flex min-w-0 flex-col gap-3 xl:h-full xl:min-h-0">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-base font-semibold tracking-[-0.02em]">Python strategy backtest</h1>
           <p className="text-[11px] text-neutral-500">HK.HSImain · code config: {timeframe} · {sessions} sessions · US${formatNumber(codeConfig.startingCapitalUsd, 0)} · {formatNumber(codeConfig.riskPercent)}% risk · {range}</p>
         </div>
-        <div className="flex items-center gap-2 text-[10px]">
+        <div className="flex flex-wrap items-center gap-2 text-[10px]">
           <span className={`rounded border px-2 py-1 font-semibold ${phase === "replaying" || phase === "calculating" ? "border-blue-200 bg-blue-50 text-blue-700" : phase === "ready" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-neutral-200 bg-white text-neutral-600"}`}>
             {phase === "calculating" ? "Running Python…" : phase === "replaying" ? `Backtesting ${playbackIndex + 1} / ${trades.length}` : phase === "ready" ? `Complete · ${trades.length} trades` : "Ready to run"}
           </span>
@@ -969,16 +969,16 @@ export default function MacdBacktest() {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,64fr)_minmax(290px,36fr)] gap-3">
-        <section className="flex min-h-0 flex-col gap-2">
-          <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2">
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 xl:min-h-0 xl:grid-cols-[minmax(0,64fr)_minmax(290px,36fr)]">
+        <section className="flex min-w-0 flex-col gap-2 xl:min-h-0">
+          <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2 py-1">
             <button type="button" disabled={!trades.length || selectedTradeIndex <= 0} onClick={() => { const trade = trades[Math.max(0, selectedTradeIndex - 1)]; if (trade) void focusTrade(trade); }} className="rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] font-semibold disabled:opacity-35">← Last</button>
             <button type="button" disabled={!trades.length || selectedTradeIndex < 0 || selectedTradeIndex >= trades.length - 1} onClick={() => { const trade = trades[selectedTradeIndex + 1]; if (trade) void focusTrade(trade); }} className="rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] font-semibold disabled:opacity-35">Next →</button>
             <button type="button" disabled={!biggestWin} onClick={() => { if (biggestWin) void focusTrade(biggestWin); }} className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 disabled:opacity-35">Biggest win</button>
             <button type="button" disabled={!biggestLoss} onClick={() => { if (biggestLoss) void focusTrade(biggestLoss); }} className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 disabled:opacity-35">Biggest loss</button>
             <div className="ml-auto text-[10px] font-medium text-neutral-500">{selectedTrade ? `Trade ${selectedTradeIndex + 1} / ${trades.length}` : trades.length ? `${trades.length} trades` : "No trades"}</div>
           </div>
-          <div className="relative min-h-0 flex-1">
+          <div className="relative h-[420px] min-w-0 xl:h-auto xl:min-h-0 xl:flex-1">
             <BacktestChart bars={displayedBars} trades={visibleTrades} selectedTrade={focusedTrade} timeframe={timeframe} />
             {(loading || refreshingHistory) && <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm text-neutral-500">{refreshingHistory ? `Refreshing ${timeframe} candles from Futu…` : `Loading recent ${timeframe} candles…`}</div>}
             {error && <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700">{error}</div>}
@@ -986,8 +986,8 @@ export default function MacdBacktest() {
           <EquityCurve trades={visibleTrades} initialCapitalUsd={toUsd(metricsCapital)} fxRate={displayRate} selectedTradeId={focusedTrade?.id ?? null} onSelect={(trade) => void focusTrade(trade)} />
         </section>
 
-        <aside className="flex min-h-0 flex-col gap-3">
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <aside className="flex min-w-0 flex-col gap-3 xl:min-h-0">
+          <section className="flex h-[360px] min-w-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white xl:h-auto xl:min-h-0 xl:flex-1">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5">
               <div><div className="text-sm font-bold">Python Code</div><div className="text-[10px] text-neutral-500">BACKTEST config + strategy(bars) are the complete machine</div></div>
               <div className="flex items-center gap-2">
@@ -998,7 +998,7 @@ export default function MacdBacktest() {
             {runError && <div className="border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{runError}</div>}
             <textarea value={code} onChange={(event) => setCode(event.target.value)} spellCheck={false} className="min-h-0 flex-1 resize-none bg-neutral-950 p-3 font-mono text-[12px] leading-5 text-neutral-100 outline-none" aria-label="Python strategy code" />
           </section>
-          <section className="flex min-h-0 flex-[1.05] flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white">
+          <section className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white xl:min-h-0 xl:flex-[1.05]">
           <div className="border-b border-neutral-200 px-4 py-3">
             <div className="text-lg font-bold tracking-[-0.02em]">Statistics</div>
             <div className="mt-0.5 text-xs text-neutral-500">Metrics update as each trade is replayed</div>

@@ -13,14 +13,14 @@ export default function TopTabs() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-xl">
-      <div className="flex h-14 items-center px-4 md:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center gap-y-2 px-3 py-2 sm:h-14 sm:flex-nowrap sm:px-4 sm:py-0 md:px-6 lg:px-8">
         <Link href="/market-data" className="flex shrink-0 items-center gap-2.5" aria-label="Trading Tools home">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[9px] font-bold text-white shadow-sm">
             TT
           </span>
           <span className="text-sm font-semibold tracking-[-0.02em] text-black">Trading Tools</span>
         </Link>
-        <nav className="ml-7 flex items-center gap-1" aria-label="Product views">
+        <nav className="flex w-full items-center gap-1 sm:ml-7 sm:w-auto" aria-label="Product views">
           {tabs.map((tab) => {
             const active = pathname.startsWith(tab.href);
             return (
