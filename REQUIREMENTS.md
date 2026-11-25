@@ -1361,3 +1361,19 @@ Implementation:
 Verification:
 
 - The recovery branch was reviewed against the app-scoped runtime stop and the subsequent existing build, SQLite, security, and deployment gates. The Windows GitHub Actions run remains the execution check for this PowerShell path.
+
+### 2026-11-24 — Serialize manual and automatic VPS updates
+
+User report:
+
+- After the first dependency-cleanup retry, `npm ci` again failed with Windows `Access is denied` and `ENOTEMPTY` errors under `node_modules`. The web and worker tasks remained stopped. The VPS showed `TradingToolsAutoUpdate` running while the user ran `update.ps1` manually.
+
+Implementation:
+
+- Moved the named update mutex into `update.ps1`, so both manual and scheduled update paths must acquire the same lock before touching the checkout, dependencies, or tasks.
+- A scheduled check skips when another update holds the lock. A concurrent manual update now stops with a clear message before changing files or stopping services.
+- The interrupted-install cleanup remains limited to the app's disposable `node_modules`; private market data and other services are outside its scope.
+
+Verification:
+
+- The pinned Node 22.23.0 Windows updater contract test passed and the diff had no whitespace errors. VPS recovery still requires a successful Administrator-run update and live health check.

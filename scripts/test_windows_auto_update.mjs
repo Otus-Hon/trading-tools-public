@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contracts = {
   "deploy/windows/auto-update.ps1": [
-    "Global\\TradingToolsAutoUpdate",
     "update.ps1",
     "auto-update.log",
+    "-SkipIfBusy",
   ],
   "deploy/windows/register-auto-update.ps1": [
     "TradingToolsAutoUpdate",
@@ -16,6 +16,9 @@ const contracts = {
     "MultipleInstances IgnoreNew",
   ],
   "deploy/windows/update.ps1": [
+    "Global\\TradingToolsAutoUpdate",
+    "WaitOne(0)",
+    "ReleaseMutex()",
     "safe.directory=$repositoryRoot",
     "Invoke-DeploymentGit fetch --quiet origin main",
     "merge-base --is-ancestor",

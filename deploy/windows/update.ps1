@@ -1,6 +1,21 @@
-param([switch]$Force)
+param([switch]$Force, [switch]$SkipIfBusy)
 
 $ErrorActionPreference = "Stop"
+$mutex = New-Object System.Threading.Mutex($false, "Global\TradingToolsAutoUpdate")
+$hasLock = $false
+try {
+try {
+  $hasLock = $mutex.WaitOne(0)
+} catch [System.Threading.AbandonedMutexException] {
+  $hasLock = $true
+}
+if (-not $hasLock) {
+  if ($SkipIfBusy) {
+    Write-Host "Another Trading Tools update is running; skipping this automatic check."
+    return
+  }
+  throw "Another Trading Tools update is running. Wait for it to finish before starting a manual update."
+}
 $repositoryRoot = "C:\TradingTools\app"
 Set-Location $repositoryRoot
 
@@ -62,3 +77,7 @@ Set-UpdateProgress 94 "Waiting for health and security checks"
 & .\deploy\windows\verify-deployment.ps1
 Set-UpdateProgress 100 "Deployment healthy at $targetCommit"
 Write-Progress -Activity "Updating Trading Tools" -Completed
+} finally {
+  if ($hasLock) { $mutex.ReleaseMutex() }
+  $mutex.Dispose()
+}
