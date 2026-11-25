@@ -2031,7 +2031,7 @@ export default function HsiPanel({ refreshToken, startupCheck, dataMode = "main"
         </div>
       )}
       {hasError && !isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm text-red-600">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-red-600">
           Failed to load HSI data
         </div>
       )}
