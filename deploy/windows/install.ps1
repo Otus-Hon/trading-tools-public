@@ -4,6 +4,19 @@ function Set-InstallProgress([int]$Percent, [string]$Status) {
   Write-Progress -Activity "Building Trading Tools" -Status $Status -PercentComplete $Percent
 }
 
+function Clear-InterruptedNodeInstall([string]$RepositoryRoot) {
+  $modulesPath = Join-Path $RepositoryRoot "node_modules"
+  for ($attempt = 1; $attempt -le 3; $attempt += 1) {
+    if (-not (Test-Path -LiteralPath $modulesPath)) { return }
+    # npm ci can leave half-removed package folders after a Windows ENOTEMPTY
+    # error. Only these reproducible dependencies are safe to discard.
+    & cmd.exe /d /c "rd /s /q `"$modulesPath`""
+    if (-not (Test-Path -LiteralPath $modulesPath)) { return }
+    Start-Sleep -Seconds 3
+  }
+  throw "The app's node_modules folder is still locked. Trading Tools tasks remain stopped."
+}
+
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $serverRoot = "C:\TradingTools"
 $configPath = Join-Path $serverRoot "config\production.ps1"
@@ -68,7 +81,12 @@ if (-not $releaseHealthy) {
   # omits TypeScript, Tailwind/PostCSS, and other build-only dependencies.
   Set-InstallProgress 34 "Installing locked Node dependencies"
   & npm.cmd ci --include=dev
-  if ($LASTEXITCODE -ne 0) { throw "npm clean install failed. Trading Tools tasks remain stopped." }
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "npm clean install failed. Clearing only the app's partial node_modules and retrying once."
+    Clear-InterruptedNodeInstall $repositoryRoot
+    & npm.cmd ci --include=dev
+    if ($LASTEXITCODE -ne 0) { throw "npm clean install failed after retry. Trading Tools tasks remain stopped." }
+  }
   & npm.cmd run ensure:sqlite
   if ($LASTEXITCODE -ne 0) { throw "SQLite ABI verification failed." }
   Set-InstallProgress 55 "Compiling the production dashboard"

@@ -1346,3 +1346,18 @@ Verification:
 - Pinned Node 22.23.0 production build and TypeScript checks passed; SQLite ABI preflight passed.
 - Public-security integration and backtest SQLite retention tests passed.
 - In 390 × 844 and 320 × 700 browser viewports, Main Data, Auto backtest, and Python backtest remained within the viewport width and scrolled to their lower content. The 15-minute dialog fitted the 320-pixel viewport, and General/Detail remained clickable while the no-data message was visible. The live-refresh countdown completed a five-second cycle. Local provider data was unavailable, so live chart values were not independently checked in this browser session.
+
+### 2026-11-24 — Recover Windows updates from an interrupted npm cleanup
+
+User report:
+
+- The VPS updater stopped the Trading Tools tasks, then `npm ci` failed with `ENOTEMPTY` while removing `node_modules\caniuse-lite\data\features`, leaving the public site unavailable.
+
+Implementation:
+
+- After a failed `npm ci`, the installer now clears only the app's disposable `node_modules` directory and retries the locked install once. It waits briefly for transient Windows file locks and still fails closed if cleanup or the retry cannot complete.
+- Private data, Futu OpenD, Tailscale, and unrelated processes remain outside the cleanup scope.
+
+Verification:
+
+- The recovery branch was reviewed against the app-scoped runtime stop and the subsequent existing build, SQLite, security, and deployment gates. The Windows GitHub Actions run remains the execution check for this PowerShell path.
