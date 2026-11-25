@@ -8,7 +8,7 @@ export default function BacktestPage() {
   const [view, setView] = useState<"auto" | "python">("auto");
 
   return (
-    <main className="flex min-h-[100dvh] flex-col overflow-visible bg-[#fafafa] px-3 py-4 text-neutral-950 sm:px-4 md:px-6 lg:px-8 xl:h-[calc(100dvh-3.5625rem)] xl:min-h-0 xl:overflow-hidden">
+    <main className="flex min-h-[100dvh] flex-col bg-[#fafafa] px-3 py-4 text-neutral-950 sm:px-4 md:px-6 lg:px-8">
       <div className="mb-3 flex shrink-0 rounded-lg border border-neutral-200 bg-white p-0.5" aria-label="Backtest views">
         <button
           type="button"

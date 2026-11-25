@@ -13,11 +13,10 @@ On the chart:
 - **General** shows 100-point CBBC outstanding bands. **Detail** shows exact recovery prices from Futu. The KO alert follows the level shown in the selected view.
 - **15 minute** opens a closer view of HSI spot prices and CBBC levels.
 - The lower panes show futures volume, long and short capital flow, and official futures open interest. Blue and red capital-flow bars have different meanings in the long and short panes; read each pane's label.
-- The smaller cards show related Hong Kong and overseas markets. When a provider substitutes a proxy instrument, the card says so.
 
 **Backtest** lets you inspect automatic strategy summaries and write a Python strategy. The public site saves your Python text in your browser, but does not run arbitrary Python on the public server. Run custom strategies in a private installation.
 
-The site is designed for a phone as well as a desktop. On a phone, scroll down to see the related markets and Backtest sections.
+The site is designed for a phone as well as a desktop. Scroll down on Backtest to see the full set of charts and results.
 
 ## Where the numbers come from
 
@@ -28,7 +27,6 @@ The site is designed for a phone as well as a desktop. On a phone, scroll down t
 | CBBC levels | Futu for exact recovery prices; J.P. Morgan for 100-point outstanding bands |
 | Long and short capital flow | CITIC |
 | Official HSI futures open interest | HKEX daily report, all contracts total |
-| Related market charts | Yahoo daily history; Futu supplies the live quotes for 0700, 9988, and 0005 |
 
 These figures describe different instruments and update on different schedules. In particular, Futu's main-contract position is displayed separately from HKEX's all-contract open-interest total. For exact source rules, update schedules, and persistence requirements, see [REQUIREMENTS.md](REQUIREMENTS.md).
 

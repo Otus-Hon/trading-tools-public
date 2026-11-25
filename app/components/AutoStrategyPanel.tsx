@@ -504,7 +504,7 @@ export default function AutoStrategyPanel() {
   const lookback = summary?.lookbackDays ?? days ?? "—";
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pb-6">
+    <div className="flex min-w-0 flex-col gap-4 pb-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-3">
         <div>
           <h1 className="text-xl font-semibold tracking-[-0.02em]">Auto backtest</h1>

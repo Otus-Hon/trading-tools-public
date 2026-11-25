@@ -7,7 +7,7 @@ This file is the durable source of truth for product behavior. It must be read t
 ### Refresh behavior
 
 - The Market Data dashboard automatically rereads and renders the complete verified data state every 5 seconds.
-- Five-second autoload includes HSI/Futu market data, CBBC data, long and short money flow, open interest, and the related-market panels.
+- Five-second autoload includes HSI/Futu market data, CBBC data, long and short money flow, and open interest. Related-market provider caches continue to refresh on their established cadence without a Main Data sidebar.
 - Live Futu snapshots are provider-polled every five seconds. Daily datasets may be reread from SQLite/cache every five seconds but must not be force-refetched from Yahoo, CITIC, or HKEX at tick frequency.
 - Provider cadence must match metric cadence: Futu live 5 seconds, Futu daily history at most 60 seconds unless manually forced, CITIC at most 5 minutes, Yahoo daily bars 15 minutes, and HKEX reports only when the expected completed report is missing.
 - Manual **Refresh All Data** triggers the same complete pipeline immediately.
@@ -42,7 +42,7 @@ This file is the durable source of truth for product behavior. It must be read t
 - Every cached fallback must retain its last verified values and expose stale/unavailable state; cached data must never be promoted as a fresh tick.
 - Proxy instruments must be visibly labelled as proxies and must never be described as the named underlying or future.
 - Provider, exact symbol/field, aggregation scope, unit, and timestamp must be recorded before a metric can be joined or compared.
-- The 0700, 9988, and 0005 card headers use Futu snapshot price, previous close, and change rate as one authoritative tuple; Yahoo daily-history rereads must never replace that tuple.
+- The retained 0700, 9988, and 0005 quote snapshots use Futu price, previous close, and change rate as one authoritative tuple; Yahoo daily-history rereads must never replace that tuple.
 - Futu CBBC recovery-level totals must be aggregated from every NORMAL-status HSI bull/bear product reported by the provider's paginated result. A first page or incomplete pagination result must never be presented as a verified warrant snapshot.
 - The Market Data chart presents CBBC in two explicit modes. General (default) uses the Backup Data 100-point outstanding-band calculation. Detail uses exact Futu recovery prices. Money flow and official open interest remain on the chart in both modes. Both modes keep knockout alerts and the five-second live Futu poll.
 - General knockout alerts fire only when the live Futu cash range reaches the drawn line for a 100-point band: bear lines at `end + 1`, bull lines at `start - 1`. Entering the bucket without printing that line is not a knockout. A band that drops out of the outstanding feed stays in the session registry so a real line cross still alerts. Detail alerts remain on the exact recovery price. The first poll after open, a new session, or a tab change only records the baseline.
@@ -1393,3 +1393,22 @@ Implementation:
 Verification:
 
 - The pinned Node 22.23.0 Windows updater contract test passed and the diff had no whitespace errors. The VPS still requires a successful manual run and live health verification.
+
+### 2026-11-24 — Remove the Main Data sidebar and restore Backtest page scrolling
+
+User request:
+
+- Remove the entire related-market column to the right of the HSI chart.
+- Make the Backtest page scroll so its lower charts and results can be reached.
+
+Implementation:
+
+- Render the HSI panel across the full Main Data width and remove the related-market cards from that page. Keep the related-market API, provider caches, and worker cadence intact.
+- Let the Backtest document grow naturally on desktop and phone. Remove the nested scroll container from Auto strategies and the viewport-height layout constraints from the Python view; keep its chart and code editor at usable heights.
+- Update the README and current product requirements to describe the visible layout.
+
+Verification:
+
+- The pinned Node 22.23.0 production build, public-security integration test, backtest SQLite retention test, and Windows updater contract test passed.
+- In the browser, Auto strategies at a desktop viewport had 1,255 pixels of document height within a 727-pixel viewport and reached 528 pixels of page scroll with End. The Python view kept a 420-pixel chart. Main Data had a single chart section spanning its content width, with no sidebar. At phone width, neither page overflowed horizontally and Backtest had 2,273 pixels of scrollable document height.
+- The market-data audit found the versioned 211 long and 112 short money-flow rows in SQLite, but cannot pass in this fresh clone because it has no live Futu, HKEX, CBBC, or backtest provider caches. No market-data ingestion or persistence code changed. Live provider values require verification on the VPS.
