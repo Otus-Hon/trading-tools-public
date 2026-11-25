@@ -1377,3 +1377,19 @@ Implementation:
 Verification:
 
 - The pinned Node 22.23.0 Windows updater contract test passed and the diff had no whitespace errors. VPS recovery still requires a successful Administrator-run update and live health check.
+
+### 2026-11-24 — Prevent the VPS build from accepting an interactive Next.js upgrade
+
+User report:
+
+- With automatic updates paused, dependency installation and the SQLite ABI check passed, but the Windows build switched into a Next.js 16.4.2-to-16.4.6 agent-upgrade prompt. The installer then ran public-security tests without a `.next\BUILD_ID`, and the stopped tasks stayed down.
+
+Implementation:
+
+- Run only the production build under `CI=1` so the deployment cannot switch to the interactive upgrade flow. Restore the previous environment setting afterwards.
+- Require `.next\BUILD_ID` before any security test or release stamp, even if the build command returned success.
+- Preserve the pinned package lock and all data, security, and startup gates. A framework upgrade remains an explicit source change to review separately.
+
+Verification:
+
+- The pinned Node 22.23.0 Windows updater contract test passed and the diff had no whitespace errors. The VPS still requires a successful manual run and live health verification.

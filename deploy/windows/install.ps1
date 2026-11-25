@@ -90,11 +90,23 @@ if (-not $releaseHealthy) {
   & npm.cmd run ensure:sqlite
   if ($LASTEXITCODE -ne 0) { throw "SQLite ABI verification failed." }
   Set-InstallProgress 55 "Compiling the production dashboard"
-  & npm.cmd run build
-  if ($LASTEXITCODE -ne 0) { throw "Production build failed." }
+  # Next.js 16.4 can offer an interactive agent-led upgrade during a build.
+  # CI mode keeps this deployment build noninteractive and on the pinned lockfile.
+  $previousCi = $env:CI
+  try {
+    $env:CI = "1"
+    & npm.cmd run build
+    $buildExitCode = $LASTEXITCODE
+  } finally {
+    $env:CI = $previousCi
+  }
+  if ($buildExitCode -ne 0) { throw "Production build failed." }
 } else {
   Set-InstallProgress 70 "Exact release already built - reusing it"
   Write-Host "This exact release and its SQLite binding are healthy; skipping npm reinstall and rebuild."
+}
+if (-not (Test-Path (Join-Path $repositoryRoot ".next\BUILD_ID"))) {
+  throw "Production build returned without creating .next\BUILD_ID. Trading Tools tasks remain stopped."
 }
 
 Set-InstallProgress 76 "Running public-security integration tests"

@@ -29,6 +29,8 @@ const contracts = {
   "deploy/windows/install.ps1": [
     "Write-Progress",
     "npm.cmd run build",
+    '$env:CI = "1"',
+    '.next\\BUILD_ID',
     "test:public-security",
   ],
 };
